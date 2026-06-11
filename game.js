@@ -11,7 +11,7 @@ const hud = createHud({
   health: document.getElementById("health"),
   level: document.getElementById("level")
 });
-const input = createInputController(document);
+const input = createInputController(document, canvas);
 const state = resetGame(canvas);
 
 hud.update(state);
