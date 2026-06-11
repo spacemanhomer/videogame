@@ -1,4 +1,14 @@
-const c=document.getElementById('game'),x=c.getContext('2d'),S=document.getElementById('score'),H=document.getElementById('health'),L=document.getElementById('level');
-const T=20,C=c.width/T,R=c.height/T,types=[['grass','#24452b',1],['moss','#3f6636',1.15],['sand','#8b7440',.85],['mud','#4b3024',.55],['stone','#626262',1.35],['water','#1f4056',.45]];
-let map=[],p,r,es,score,health,level,keys={};
-function pick(v){return v<.18?1:v<.34?2:v<.49?3:v<.64?4:v<.78?5
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const scoreBox = document.getElementById('score');
+const healthBox = document.getElementById('health');
+const levelBox = document.getElementById('level');
+
+const tile = 20;
+const cols = 40;
+const rows = 25;
+const landColors = ['#24452b', '#3f6636', '#8b7440', '#4b3024', '#626262'];
+const landSpeeds = [1, 1.12, 0.85, 0.55, 1.3];
+
+let land = [];
+let keys = {}
