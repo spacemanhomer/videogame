@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Relic Runner</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="wrap">
+    <h1>Relic Runner</h1>
+    <p class="tagline">Grab relics. Dodge ghosts. Become archaeology.</p>
+
+    <section class="hud" aria-label="game stats">
+      <span>Score: <strong id="score">0</strong></span>
+      <span>Health: <strong id="health">3</strong></span>
+      <span>Level: <strong id="level">1</strong></span>
+    </section>
+
+    <canvas id="game" width="800" height="500" aria-label="Relic Runner game canvas"></canvas>
+
+    <section class="controls">
+      <p>Move with <strong>WASD</strong> or <strong>Arrow Keys</strong>. Collect gold relics. Avoid red ghosts.</p>
+      <button id="restart">Restart</button>
+    </section>
+  </main>
+
+  <script src="game.js"></script>
+</body>
+</html>
