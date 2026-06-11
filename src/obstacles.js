@@ -20,6 +20,7 @@ export function createObstacles() {
 }
 
 export function drawObstacles(ctx, obstacles) {
+  ctx.save();
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.font = "18px monospace";
@@ -31,6 +32,8 @@ export function drawObstacles(ctx, obstacles) {
     ctx.fillStyle = obstacle.color;
     ctx.fillText(obstacle.symbol, obstacle.x + obstacle.size / 2, obstacle.y + obstacle.size / 2 + 1);
   }
+
+  ctx.restore();
 }
 
 export function collidesWithSolidObstacle(rect, obstacles) {
