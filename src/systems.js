@@ -26,8 +26,10 @@ import { createRelic, placeRelic, resetPlayer, spawnEnemy, touches } from "./ent
 import { activeObstacles, collidesWithPainfulObstacle, collidesWithSolidObstacle, createObstacleChunks, updateObstacleChunks } from "./obstacles.js";
 import { copyState, createInitialState } from "./state.js";
 import { createTerrainChunks, isImpassableWater, isPainfulWater, terrainSpeedAt, updateTerrainChunks } from "./terrain.js";
+import { resetWorldSeed } from "./worldSeed.js";
 
 export function resetGame(canvas, existingState = createInitialState()) {
+  resetWorldSeed();
   const nextState = createInitialState();
 
   nextState.terrain = createTerrainChunks();
