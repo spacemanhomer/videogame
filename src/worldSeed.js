@@ -1,11 +1,11 @@
-const STORAGE_KEY = "relic-runner-world-seed-v1";
-
-let cachedSeed = null;
+let cachedSeed = createSeed();
 
 export function getWorldSeed() {
-  if (cachedSeed !== null) return cachedSeed;
+  return cachedSeed;
+}
 
-  cachedSeed = loadSeed();
+export function resetWorldSeed() {
+  cachedSeed = createSeed();
   return cachedSeed;
 }
 
@@ -18,32 +18,6 @@ export function seededNoise(x, y = 0, salt = 0) {
   ) * 43758.5453;
 
   return value - Math.floor(value);
-}
-
-function loadSeed() {
-  const stored = readStoredSeed();
-  if (Number.isFinite(stored)) return stored;
-
-  const seed = createSeed();
-  writeStoredSeed(seed);
-  return seed;
-}
-
-function readStoredSeed() {
-  try {
-    const value = globalThis.localStorage?.getItem(STORAGE_KEY);
-    return value ? Number(value) : NaN;
-  } catch (_error) {
-    return NaN;
-  }
-}
-
-function writeStoredSeed(seed) {
-  try {
-    globalThis.localStorage?.setItem(STORAGE_KEY, String(seed));
-  } catch (_error) {
-    // Private browsing or blocked storage still gets a seed for this page session.
-  }
 }
 
 function createSeed() {
