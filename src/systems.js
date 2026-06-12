@@ -1,12 +1,21 @@
 import {
+  BUCKSHOT_COOLDOWN,
+  BUCKSHOT_PELLETS,
+  BUCKSHOT_RANGE,
+  BUCKSHOT_SIZE,
+  BUCKSHOT_SPEED,
+  BUCKSHOT_SPREAD,
   DESPAWN_RADIUS,
   ENEMIES_PER_LEVEL,
+  HORDE_ENEMIES_PER_LEVEL,
+  HORDE_LEVEL,
   INITIAL_ENEMY_COUNT,
   INITIAL_RELIC_COUNT,
   LEVEL_UP_INTERVAL,
   MAX_RELIC_COUNT,
   OBSTACLE_DAMAGE_COOLDOWN,
   PLAYER_BASE_SPEED,
+  SHALLOW_WATER_DAMAGE_CHANCE,
   SHOT_COOLDOWN,
   SHOT_RANGE,
   SHOT_SIZE,
@@ -47,6 +56,7 @@ export function updateGame(state, { canvas, input, hud }) {
   updateCurrentEcosystem(state);
   centerCamera(state, canvas);
   fireSlingshot(state, input);
+  fireBuckshot(state, input);
   updateProjectiles(state);
   collectRelics(state, hud);
   updateEnemies(state, canvas, hud);
@@ -96,20 +106,57 @@ function fireSlingshot(state, input) {
   if (now - state.lastShotAt < SHOT_COOLDOWN) return;
 
   const origin = centerOf(state.player);
-  const dx = state.aim.x - origin.x;
-  const dy = state.aim.y - origin.y;
-  const distance = Math.hypot(dx, dy) || 1;
+  const aim = aimVector(origin, state.aim);
 
-  state.projectiles.push({
-    x: origin.x - SHOT_SIZE / 2,
-    y: origin.y - SHOT_SIZE / 2,
+  state.projectiles.push(createProjectile(origin, aim, {
+    range: SHOT_RANGE,
     size: SHOT_SIZE,
-    vx: (dx / distance) * SHOT_SPEED,
-    vy: (dy / distance) * SHOT_SPEED,
-    traveled: 0
-  });
+    speed: SHOT_SPEED,
+    damage: 1,
+    kind: "stone"
+  }));
 
   state.lastShotAt = now;
+}
+
+function fireBuckshot(state, input) {
+  if (!input.consumePressed("shift")) return;
+
+  const now = Date.now();
+  if (now - state.lastBuckshotAt < BUCKSHOT_COOLDOWN) return;
+
+  const origin = centerOf(state.player);
+  const aim = aimVector(origin, state.aim);
+  const baseAngle = Math.atan2(aim.y, aim.x);
+
+  for (let index = 0; index < BUCKSHOT_PELLETS; index++) {
+    const centered = index - (BUCKSHOT_PELLETS - 1) / 2;
+    const angle = baseAngle + centered * (BUCKSHOT_SPREAD / Math.max(1, BUCKSHOT_PELLETS - 1));
+
+    state.projectiles.push(createProjectile(origin, { x: Math.cos(angle), y: Math.sin(angle) }, {
+      range: BUCKSHOT_RANGE,
+      size: BUCKSHOT_SIZE,
+      speed: BUCKSHOT_SPEED,
+      damage: 1,
+      kind: "buckshot"
+    }));
+  }
+
+  state.lastBuckshotAt = now;
+}
+
+function createProjectile(origin, direction, options) {
+  return {
+    x: origin.x - options.size / 2,
+    y: origin.y - options.size / 2,
+    size: options.size,
+    vx: direction.x * options.speed,
+    vy: direction.y * options.speed,
+    traveled: 0,
+    range: options.range,
+    damage: options.damage,
+    kind: options.kind
+  };
 }
 
 function updateProjectiles(state) {
@@ -121,7 +168,7 @@ function updateProjectiles(state) {
     projectile.traveled += Math.hypot(projectile.vx, projectile.vy);
 
     if (
-      projectile.traveled > SHOT_RANGE ||
+      projectile.traveled > (projectile.range || SHOT_RANGE) ||
       collidesWithSolidObstacle(projectile, state.obstacles)
     ) {
       continue;
@@ -129,7 +176,7 @@ function updateProjectiles(state) {
 
     const hitIndex = state.enemies.findIndex(enemy => touches(projectile, enemy));
     if (hitIndex !== -1) {
-      state.enemies[hitIndex].hp = (state.enemies[hitIndex].hp || 1) - 1;
+      state.enemies[hitIndex].hp = (state.enemies[hitIndex].hp || 1) - (projectile.damage || 1);
       if (state.enemies[hitIndex].hp <= 0) state.enemies.splice(hitIndex, 1);
       continue;
     }
@@ -152,7 +199,7 @@ function collectRelics(state, hud) {
 
     if (state.score % LEVEL_UP_INTERVAL === 0) {
       state.level++;
-      addEnemies(state, ENEMIES_PER_LEVEL);
+      addEnemies(state, enemiesForLevel(state.level));
 
       if (state.relics.length < MAX_RELIC_COUNT) {
         state.relics.push(createRelic(state.player, state.obstacles));
@@ -161,6 +208,10 @@ function collectRelics(state, hud) {
   }
 
   if (collected) hud.update(state);
+}
+
+function enemiesForLevel(level) {
+  return level >= HORDE_LEVEL ? HORDE_ENEMIES_PER_LEVEL : ENEMIES_PER_LEVEL;
 }
 
 function updateEnemies(state, canvas, hud) {
@@ -182,7 +233,10 @@ function updateEnemies(state, canvas, hud) {
 }
 
 function updateTerrainDamage(state, canvas, hud) {
-  const takesDamage = collidesWithPainfulObstacle(state.player, state.obstacles) || isPainfulWater(state.terrain, state.player);
+  const thornDamage = collidesWithPainfulObstacle(state.player, state.obstacles);
+  const shallowWaterDamage = isPainfulWater(state.terrain, state.player) && Math.random() < SHALLOW_WATER_DAMAGE_CHANCE;
+  const takesDamage = thornDamage || shallowWaterDamage;
+
   if (!takesDamage) return;
 
   const now = Date.now();
@@ -259,6 +313,17 @@ function centerOf(entity) {
   return {
     x: entity.x + entity.size / 2,
     y: entity.y + entity.size / 2
+  };
+}
+
+function aimVector(origin, target) {
+  const dx = target.x - origin.x;
+  const dy = target.y - origin.y;
+  const distance = Math.hypot(dx, dy) || 1;
+
+  return {
+    x: dx / distance,
+    y: dy / distance
   };
 }
 
