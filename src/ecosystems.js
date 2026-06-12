@@ -1,3 +1,5 @@
+import { seededNoise } from "./worldSeed.js";
+
 export const ECOSYSTEMS = Object.freeze({
   ice: {
     name: "ice",
@@ -120,7 +122,10 @@ export const ENEMY_TYPES = Object.freeze({
 export const DEFAULT_ENEMY_TYPE = ENEMY_TYPES.mummy;
 
 export function ecosystemAt(x, y) {
-  const value = Math.sin(x * 0.0027) + Math.cos(y * 0.0021) + seededNoise(Math.floor(x / 320), Math.floor(y / 320));
+  const value =
+    Math.sin(x * 0.0027 + seededNoise(0, 0, 51)) +
+    Math.cos(y * 0.0021 + seededNoise(0, 0, 52)) +
+    seededNoise(Math.floor(x / 320), Math.floor(y / 320), 53);
 
   if (value > 1.35) return ECOSYSTEMS.ice;
   if (value > 0.45) return ECOSYSTEMS.savannah;
@@ -136,12 +141,10 @@ export function materialFor(ecosystem, kind) {
 export function pickEnemyTypeFor(position) {
   const ecosystem = ecosystemAt(position.x, position.y);
   const choices = ecosystem.enemies;
-  const index = Math.min(choices.length - 1, Math.floor(seededNoise(Math.floor(position.x), Math.floor(position.y)) * choices.length));
+  const index = Math.min(
+    choices.length - 1,
+    Math.floor(seededNoise(Math.floor(position.x), Math.floor(position.y), 54) * choices.length)
+  );
 
   return ENEMY_TYPES[choices[index]] || DEFAULT_ENEMY_TYPE;
-}
-
-function seededNoise(x, y) {
-  const value = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
-  return value - Math.floor(value);
 }
