@@ -6,6 +6,7 @@ export function createInitialState() {
     obstacleChunks: new Map(),
     obstacles: [],
     camera: { x: 0, y: 0 },
+    currentEcosystem: "scrub",
     score: 0,
     health: 3,
     level: 1,
@@ -24,6 +25,7 @@ export function copyState(target, source) {
   target.obstacleChunks = source.obstacleChunks;
   target.obstacles = source.obstacles;
   target.camera = source.camera;
+  target.currentEcosystem = source.currentEcosystem;
   target.score = source.score;
   target.health = source.health;
   target.level = source.level;
