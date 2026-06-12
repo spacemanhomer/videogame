@@ -3,11 +3,13 @@ import { seededNoise } from "./worldSeed.js";
 
 const CHUNK_SIZE_PIXELS = CHUNK_SIZE_TILES * TILE_SIZE;
 const HIEROGLYPHS = ["𓂀", "𓊽", "𓉐", "𓃭", "𓆣", "𓋹", "𓎛", "𓇳"];
+const PURPLE_RUNES = ["✧", "✦", "◇", "◆", "◈", "☌", "☉", "☽"];
 const OBSTACLE_TYPES = Object.freeze({
   cactus: { kind: "solid", symbol: "▥", color: "#5fbf6a", label: "cactus wall" },
   thorns: { kind: "painful", symbol: "♣", color: "#d85f72", label: "thorny bush" },
   stone: { kind: "solid", symbol: "▣", color: "#8a8f98", label: "stone block" },
-  hieroglyph: { kind: "solid", symbol: "𓋹", color: "#f1d28a", label: "glyph ruin" }
+  hieroglyph: { kind: "solid", symbol: "𓋹", color: "#f1d28a", label: "glyph ruin" },
+  rune: { kind: "decorative", symbol: "✧", color: "#c079ff", label: "purple rune" }
 });
 
 export function createObstacleChunks() {
@@ -49,6 +51,12 @@ export function drawObstacles(ctx, obstacles, camera) {
       ctx.fillStyle = "rgba(18, 12, 5, 0.18)";
       ctx.fillRect(screenX + 2, screenY + 2, obstacle.size - 4, obstacle.size - 4);
       ctx.font = "20px 'Noto Sans Egyptian Hieroglyphs', 'Segoe UI Historic', serif";
+    } else if (obstacle.structure === "purple-rune") {
+      ctx.fillStyle = "rgba(92, 31, 128, 0.18)";
+      ctx.beginPath();
+      ctx.arc(screenX + obstacle.size / 2, screenY + obstacle.size / 2, obstacle.size * 0.42, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.font = "18px Georgia, 'Times New Roman', serif";
     } else {
       ctx.fillStyle = obstacle.kind === "solid" ? "rgba(0, 0, 0, 0.35)" : "rgba(90, 0, 25, 0.3)";
       ctx.fillRect(screenX, screenY, obstacle.size, obstacle.size);
@@ -134,6 +142,8 @@ function addGlyphRuin(obstacles, chunkX, chunkY) {
 
       if (onWall && !isGap) {
         addGlyphObstacle(obstacles, chunkX, chunkY, baseX + x, baseY + y, x, y);
+      } else if (!onWall && seededNoise(chunkX + x, chunkY + y, 108) > 0.42) {
+        addPurpleRune(obstacles, chunkX, chunkY, baseX + x, baseY + y, x, y);
       }
     }
   }
@@ -161,6 +171,22 @@ function addGlyphObstacle(obstacles, chunkX, chunkY, localTileX, localTileY, dx,
     y: (chunkY * CHUNK_SIZE_TILES + localTileY) * TILE_SIZE,
     size: TILE_SIZE,
     structure: "glyph-ruin"
+  };
+
+  if (Math.hypot(obstacle.x - PLAYER_START.x, obstacle.y - PLAYER_START.y) > 180) {
+    obstacles.push(obstacle);
+  }
+}
+
+function addPurpleRune(obstacles, chunkX, chunkY, localTileX, localTileY, dx, dy) {
+  const runeIndex = Math.floor(seededNoise(chunkX + dx, chunkY + dy, 109) * PURPLE_RUNES.length);
+  const obstacle = {
+    ...OBSTACLE_TYPES.rune,
+    symbol: PURPLE_RUNES[runeIndex],
+    x: (chunkX * CHUNK_SIZE_TILES + localTileX) * TILE_SIZE,
+    y: (chunkY * CHUNK_SIZE_TILES + localTileY) * TILE_SIZE,
+    size: TILE_SIZE,
+    structure: "purple-rune"
   };
 
   if (Math.hypot(obstacle.x - PLAYER_START.x, obstacle.y - PLAYER_START.y) > 180) {
