@@ -85,6 +85,8 @@ export const ENEMY_TYPES = Object.freeze({
   }
 });
 
+export const DEFAULT_ENEMY_TYPE = ENEMY_TYPES.mummy;
+
 export function ecosystemAt(x, y) {
   const value = Math.sin(x * 0.0027) + Math.cos(y * 0.0021) + seededNoise(Math.floor(x / 320), Math.floor(y / 320));
 
@@ -97,9 +99,9 @@ export function ecosystemAt(x, y) {
 export function pickEnemyTypeFor(position) {
   const ecosystem = ecosystemAt(position.x, position.y);
   const choices = ecosystem.enemies;
-  const index = Math.floor(seededNoise(Math.floor(position.x), Math.floor(position.y)) * choices.length);
+  const index = Math.min(choices.length - 1, Math.floor(seededNoise(Math.floor(position.x), Math.floor(position.y)) * choices.length));
 
-  return ENEMY_TYPES[choices[index]];
+  return ENEMY_TYPES[choices[index]] || DEFAULT_ENEMY_TYPE;
 }
 
 function seededNoise(x, y) {
