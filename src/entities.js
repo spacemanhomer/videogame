@@ -1,6 +1,15 @@
 import { PLAYER_START, SPAWN_RADIUS } from "./constants.js";
 import { ecosystemAt, pickEnemyTypeFor } from "./ecosystems.js";
 import { collidesWithSolidObstacle } from "./obstacles.js";
+import { seededNoise } from "./worldSeed.js";
+
+const RELIC_STYLES = Object.freeze([
+  { glyph: "✦", color: "#ffd45a", fill: "#fff4ba", stroke: "#5c3600", aura: "rgba(255, 212, 90, 0.34)" },
+  { glyph: "☥", color: "#48d7c9", fill: "#d9fffb", stroke: "#003b40", aura: "rgba(72, 215, 201, 0.32)" },
+  { glyph: "◆", color: "#ff7aa8", fill: "#ffe4ee", stroke: "#4f0020", aura: "rgba(255, 122, 168, 0.3)" },
+  { glyph: "◈", color: "#b58cff", fill: "#efe5ff", stroke: "#23005a", aura: "rgba(181, 140, 255, 0.3)" },
+  { glyph: "𓂀", color: "#f4c06a", fill: "#fff0c8", stroke: "#4a2600", aura: "rgba(244, 192, 106, 0.32)" }
+]);
 
 export function spawnEnemy(anchor, obstacles = []) {
   const position = randomOpenPosition(anchor, 20, obstacles, 140);
@@ -30,7 +39,7 @@ export function spawnEnemy(anchor, obstacles = []) {
 }
 
 export function createRelic(anchor, obstacles = []) {
-  const relic = { x: anchor.x, y: anchor.y, size: 14 };
+  const relic = { x: anchor.x, y: anchor.y, size: 18, ...pickRelicStyle(anchor) };
   placeRelic(relic, anchor, obstacles);
   return relic;
 }
@@ -39,6 +48,7 @@ export function placeRelic(relic, anchor, obstacles = []) {
   const position = randomOpenPosition(anchor, relic.size, obstacles, 90);
   relic.x = position.x;
   relic.y = position.y;
+  Object.assign(relic, pickRelicStyle(position));
 }
 
 export function resetPlayer(player) {
@@ -72,4 +82,13 @@ function randomOpenPosition(anchor, size, obstacles, minDistance) {
   }
 
   return { x: anchor.x + minDistance, y: anchor.y + minDistance };
+}
+
+function pickRelicStyle(position) {
+  const index = Math.min(
+    RELIC_STYLES.length - 1,
+    Math.floor(seededNoise(Math.floor(position.x / 36), Math.floor(position.y / 36), 201) * RELIC_STYLES.length)
+  );
+
+  return RELIC_STYLES[index];
 }
