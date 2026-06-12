@@ -1,4 +1,5 @@
 import {
+  DESPAWN_RADIUS,
   ENEMIES_PER_LEVEL,
   ENEMY_SEEK_SPEED,
   INITIAL_ENEMY_COUNT,
@@ -13,39 +14,56 @@ import {
   SHOT_SPEED
 } from "./constants.js";
 import { createRelic, placeRelic, resetPlayer, spawnEnemy, touches } from "./entities.js";
-import { collidesWithPainfulObstacle, collidesWithSolidObstacle, createObstacles } from "./obstacles.js";
+import { activeObstacles, collidesWithPainfulObstacle, collidesWithSolidObstacle, createObstacleChunks, updateObstacleChunks } from "./obstacles.js";
 import { copyState, createInitialState } from "./state.js";
-import { createTerrain, terrainSpeedAt } from "./terrain.js";
+import { createTerrainChunks, terrainSpeedAt, updateTerrainChunks } from "./terrain.js";
 
 export function resetGame(canvas, existingState = createInitialState()) {
   const nextState = createInitialState();
 
-  nextState.terrain = createTerrain();
-  nextState.obstacles = createObstacles(canvas);
+  nextState.terrain = createTerrainChunks();
+  nextState.obstacleChunks = createObstacleChunks();
+  loadWorldAroundPlayer(nextState);
+  centerCamera(nextState, canvas);
   nextState.relics = Array.from(
     { length: INITIAL_RELIC_COUNT },
-    () => createRelic(canvas, nextState.obstacles)
+    () => createRelic(nextState.player, nextState.obstacles)
   );
   nextState.enemies = Array.from(
     { length: INITIAL_ENEMY_COUNT },
-    () => spawnEnemy(canvas, nextState.obstacles)
+    () => spawnEnemy(nextState.player, nextState.obstacles)
   );
 
   return copyState(existingState, nextState);
 }
 
 export function updateGame(state, { canvas, input, hud }) {
-  state.aim = input.getAimPoint();
+  state.aim = screenToWorld(input.getAimPoint(), state.camera);
 
-  movePlayer(state, canvas, input);
+  loadWorldAroundPlayer(state);
+  movePlayer(state, input);
+  loadWorldAroundPlayer(state);
+  centerCamera(state, canvas);
   fireSlingshot(state, input);
-  updateProjectiles(state, canvas);
-  collectRelics(state, canvas, hud);
-  updateEnemies(state, canvas, hud);
+  updateProjectiles(state);
+  collectRelics(state, hud);
+  updateEnemies(state, hud);
   updateObstacleDamage(state, canvas, hud);
+  replenishNearbySpawns(state);
 }
 
-function movePlayer(state, canvas, input) {
+function loadWorldAroundPlayer(state) {
+  updateTerrainChunks(state.terrain, state.player);
+  updateObstacleChunks(state.obstacleChunks, state.player);
+  state.obstacles = activeObstacles(state.obstacleChunks);
+}
+
+function centerCamera(state, canvas) {
+  state.camera.x = state.player.x + state.player.size / 2 - canvas.width / 2;
+  state.camera.y = state.player.y + state.player.size / 2 - canvas.height / 2;
+}
+
+function movePlayer(state, input) {
   const speed = PLAYER_BASE_SPEED * terrainSpeedAt(state.terrain, state.player);
   const next = { ...state.player };
 
@@ -53,9 +71,6 @@ function movePlayer(state, canvas, input) {
   if (input.isPressed("s", "arrowdown")) next.y += speed;
   if (input.isPressed("a", "arrowleft")) next.x -= speed;
   if (input.isPressed("d", "arrowright")) next.x += speed;
-
-  next.x = Math.max(0, Math.min(canvas.width - state.player.size, next.x));
-  next.y = Math.max(0, Math.min(canvas.height - state.player.size, next.y));
 
   const xMove = { ...state.player, x: next.x };
   if (!collidesWithSolidObstacle(xMove, state.obstacles)) state.player.x = next.x;
@@ -87,7 +102,7 @@ function fireSlingshot(state, input) {
   state.lastShotAt = now;
 }
 
-function updateProjectiles(state, canvas) {
+function updateProjectiles(state) {
   const remainingProjectiles = [];
 
   for (const projectile of state.projectiles) {
@@ -97,10 +112,6 @@ function updateProjectiles(state, canvas) {
 
     if (
       projectile.traveled > SHOT_RANGE ||
-      projectile.x < 0 ||
-      projectile.y < 0 ||
-      projectile.x > canvas.width ||
-      projectile.y > canvas.height ||
       collidesWithSolidObstacle(projectile, state.obstacles)
     ) {
       continue;
@@ -118,7 +129,7 @@ function updateProjectiles(state, canvas) {
   state.projectiles = remainingProjectiles;
 }
 
-function collectRelics(state, canvas, hud) {
+function collectRelics(state, hud) {
   let collected = false;
 
   for (const relic of state.relics) {
@@ -126,14 +137,14 @@ function collectRelics(state, canvas, hud) {
 
     state.score++;
     collected = true;
-    placeRelic(relic, canvas, state.obstacles);
+    placeRelic(relic, state.player, state.obstacles);
 
     if (state.score % LEVEL_UP_INTERVAL === 0) {
       state.level++;
-      addEnemies(state, canvas, ENEMIES_PER_LEVEL);
+      addEnemies(state, ENEMIES_PER_LEVEL);
 
       if (state.relics.length < MAX_RELIC_COUNT) {
-        state.relics.push(createRelic(canvas, state.obstacles));
+        state.relics.push(createRelic(state.player, state.obstacles));
       }
     }
   }
@@ -141,16 +152,17 @@ function collectRelics(state, canvas, hud) {
   if (collected) hud.update(state);
 }
 
-function updateEnemies(state, canvas, hud) {
+function updateEnemies(state, hud) {
   for (const enemy of state.enemies) {
     seekPlayer(enemy, state.player);
-    moveEnemy(enemy, state.obstacles, canvas);
+    moveEnemy(enemy, state.obstacles);
 
     if (touches(state.player, enemy)) {
       state.health--;
       resetPlayer(state.player);
+      loadWorldAroundPlayer(state);
 
-      if (state.health <= 0) resetGame(canvas, state);
+      if (state.health <= 0) resetGame({ width: 800, height: 500 }, state);
       hud.update(state);
     }
   }
@@ -169,6 +181,20 @@ function updateObstacleDamage(state, canvas, hud) {
   hud.update(state);
 }
 
+function replenishNearbySpawns(state) {
+  state.relics = state.relics.map(relic => (
+    distanceBetween(relic, state.player) > DESPAWN_RADIUS
+      ? createRelic(state.player, state.obstacles)
+      : relic
+  ));
+
+  state.enemies = state.enemies.map(enemy => (
+    distanceBetween(enemy, state.player) > DESPAWN_RADIUS
+      ? spawnEnemy(state.player, state.obstacles)
+      : enemy
+  ));
+}
+
 function seekPlayer(enemy, player) {
   const enemyCenter = centerOf(enemy);
   const playerCenter = centerOf(player);
@@ -180,26 +206,31 @@ function seekPlayer(enemy, player) {
   enemy.vy = (dy / distance) * ENEMY_SEEK_SPEED;
 }
 
-function moveEnemy(enemy, obstacles, canvas) {
-  const nextX = Math.max(0, Math.min(canvas.width - enemy.size, enemy.x + enemy.vx));
-  const xMove = { ...enemy, x: nextX };
+function moveEnemy(enemy, obstacles) {
+  const xMove = { ...enemy, x: enemy.x + enemy.vx };
 
   if (!collidesWithSolidObstacle(xMove, obstacles)) {
-    enemy.x = nextX;
+    enemy.x = xMove.x;
   }
 
-  const nextY = Math.max(0, Math.min(canvas.height - enemy.size, enemy.y + enemy.vy));
-  const yMove = { ...enemy, y: nextY };
+  const yMove = { ...enemy, y: enemy.y + enemy.vy };
 
   if (!collidesWithSolidObstacle(yMove, obstacles)) {
-    enemy.y = nextY;
+    enemy.y = yMove.y;
   }
 }
 
-function addEnemies(state, canvas, count) {
+function addEnemies(state, count) {
   for (let index = 0; index < count; index++) {
-    state.enemies.push(spawnEnemy(canvas, state.obstacles));
+    state.enemies.push(spawnEnemy(state.player, state.obstacles));
   }
+}
+
+function screenToWorld(point, camera) {
+  return {
+    x: point.x + camera.x,
+    y: point.y + camera.y
+  };
 }
 
 function centerOf(entity) {
@@ -207,4 +238,8 @@ function centerOf(entity) {
     x: entity.x + entity.size / 2,
     y: entity.y + entity.size / 2
   };
+}
+
+function distanceBetween(a, b) {
+  return Math.hypot(a.x - b.x, a.y - b.y);
 }
