@@ -1,12 +1,12 @@
 import {
   ACTIVE_CHUNK_RADIUS,
   CHUNK_SIZE_TILES,
-  TERRAIN_COLORS,
-  TERRAIN_SPEEDS,
   TILE_SIZE
 } from "./constants.js";
+import { ecosystemAt, materialFor } from "./ecosystems.js";
 
 const CHUNK_SIZE_PIXELS = CHUNK_SIZE_TILES * TILE_SIZE;
+const WATER_KIND = 5;
 
 export function createTerrainChunks() {
   return new Map();
@@ -36,9 +36,21 @@ export function terrainAt(_chunks, x, y) {
   return terrainKindAtWorld(x, y);
 }
 
+export function terrainMaterialAt(chunks, x, y) {
+  const ecosystem = ecosystemAt(x, y);
+  return materialFor(ecosystem, terrainAt(chunks, x, y));
+}
+
 export function terrainSpeedAt(chunks, entity) {
-  const kind = terrainAt(chunks, entity.x + entity.size / 2, entity.y + entity.size / 2);
-  return TERRAIN_SPEEDS[kind];
+  return terrainMaterialAt(chunks, entity.x + entity.size / 2, entity.y + entity.size / 2).speed;
+}
+
+export function isImpassableWater(chunks, rect) {
+  return waterWidthAtRect(chunks, rect) >= 3;
+}
+
+export function isPainfulWater(chunks, rect) {
+  return waterWidthAtRect(chunks, rect) === 2;
 }
 
 export function drawTerrain(ctx, state, canvas) {
@@ -52,14 +64,25 @@ export function drawTerrain(ctx, state, canvas) {
       const worldX = tileX * TILE_SIZE;
       const worldY = tileY * TILE_SIZE;
       const kind = terrainKindAtTile(tileX, tileY);
+      const material = materialFor(ecosystemAt(worldX, worldY), kind);
 
-      ctx.fillStyle = TERRAIN_COLORS[kind];
+      ctx.fillStyle = material.color;
       ctx.fillRect(
         Math.floor(worldX - state.camera.x),
         Math.floor(worldY - state.camera.y),
         TILE_SIZE,
         TILE_SIZE
       );
+
+      if (kind === WATER_KIND) {
+        ctx.fillStyle = "rgba(255, 255, 255, 0.16)";
+        ctx.fillRect(
+          Math.floor(worldX - state.camera.x),
+          Math.floor(worldY - state.camera.y + TILE_SIZE / 2),
+          TILE_SIZE,
+          2
+        );
+      }
     }
   }
 }
@@ -80,11 +103,51 @@ function createChunk(chunkX, chunkY) {
   return { x: chunkX, y: chunkY, tiles };
 }
 
+function waterWidthAtRect(chunks, rect) {
+  const points = [
+    { x: rect.x + rect.size / 2, y: rect.y + rect.size / 2 },
+    { x: rect.x + 2, y: rect.y + rect.size / 2 },
+    { x: rect.x + rect.size - 2, y: rect.y + rect.size / 2 },
+    { x: rect.x + rect.size / 2, y: rect.y + 2 },
+    { x: rect.x + rect.size / 2, y: rect.y + rect.size - 2 }
+  ];
+
+  return Math.max(...points.map(point => waterWidthAtPoint(chunks, point.x, point.y)));
+}
+
+function waterWidthAtPoint(chunks, x, y) {
+  const tileX = Math.floor(x / TILE_SIZE);
+  const tileY = Math.floor(y / TILE_SIZE);
+
+  if (terrainKindAtTile(tileX, tileY) !== WATER_KIND) return 0;
+
+  return Math.min(countWater(tileX, tileY, 1, 0), countWater(tileX, tileY, 0, 1));
+}
+
+function countWater(tileX, tileY, stepX, stepY) {
+  let count = 1;
+
+  for (let direction of [-1, 1]) {
+    let x = tileX + stepX * direction;
+    let y = tileY + stepY * direction;
+
+    while (terrainKindAtTile(x, y) === WATER_KIND) {
+      count++;
+      x += stepX * direction;
+      y += stepY * direction;
+    }
+  }
+
+  return count;
+}
+
 function terrainKindAtWorld(x, y) {
   return terrainKindAtTile(Math.floor(x / TILE_SIZE), Math.floor(y / TILE_SIZE));
 }
 
 function terrainKindAtTile(tileX, tileY) {
+  if (isWaterTile(tileX, tileY)) return WATER_KIND;
+
   const value =
     Math.sin(tileX * 0.23) +
     Math.cos(tileY * 0.19) +
@@ -95,6 +158,18 @@ function terrainKindAtTile(tileX, tileY) {
   if (value > 1) return 0;
   if (value > 0) return 3;
   return 4;
+}
+
+function isWaterTile(tileX, tileY) {
+  const riverA = Math.abs(tileY - Math.round(Math.sin(tileX * 0.075) * 12 + seededNoise(Math.floor(tileX / 16), 7) * 16));
+  const riverB = Math.abs(tileX - Math.round(Math.cos(tileY * 0.065) * 15 + seededNoise(11, Math.floor(tileY / 16)) * 18));
+  const lake = seededNoise(Math.floor(tileX / 9), Math.floor(tileY / 9)) > 0.86 && seededNoise(tileX, tileY) > 0.45;
+
+  return riverA < waterBand(tileX, 0) || riverB < waterBand(tileY, 1) || lake;
+}
+
+function waterBand(tile, salt) {
+  return 1 + Math.floor(seededNoise(Math.floor(tile / 24), salt) * 3);
 }
 
 function chunkForWorld(x, y) {
