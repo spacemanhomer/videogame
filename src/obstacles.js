@@ -1,10 +1,13 @@
 import { ACTIVE_CHUNK_RADIUS, CHUNK_SIZE_TILES, PLAYER_START, TILE_SIZE } from "./constants.js";
+import { seededNoise } from "./worldSeed.js";
 
 const CHUNK_SIZE_PIXELS = CHUNK_SIZE_TILES * TILE_SIZE;
+const HIEROGLYPHS = ["𓂀", "𓊽", "𓉐", "𓃭", "𓆣", "𓋹", "𓎛", "𓇳"];
 const OBSTACLE_TYPES = Object.freeze({
   cactus: { kind: "solid", symbol: "▥", color: "#5fbf6a", label: "cactus wall" },
   thorns: { kind: "painful", symbol: "♣", color: "#d85f72", label: "thorny bush" },
-  stone: { kind: "solid", symbol: "▣", color: "#8a8f98", label: "stone block" }
+  stone: { kind: "solid", symbol: "▣", color: "#8a8f98", label: "stone block" },
+  hieroglyph: { kind: "solid", symbol: "𓋹", color: "#f1d28a", label: "glyph ruin" }
 });
 
 export function createObstacleChunks() {
@@ -37,14 +40,20 @@ export function drawObstacles(ctx, obstacles, camera) {
   ctx.save();
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.font = "18px monospace";
 
   for (const obstacle of obstacles) {
     const screenX = obstacle.x - camera.x;
     const screenY = obstacle.y - camera.y;
 
-    ctx.fillStyle = obstacle.kind === "solid" ? "rgba(0, 0, 0, 0.35)" : "rgba(90, 0, 25, 0.3)";
-    ctx.fillRect(screenX, screenY, obstacle.size, obstacle.size);
+    if (obstacle.structure === "glyph-ruin") {
+      ctx.fillStyle = "rgba(18, 12, 5, 0.18)";
+      ctx.fillRect(screenX + 2, screenY + 2, obstacle.size - 4, obstacle.size - 4);
+      ctx.font = "20px 'Noto Sans Egyptian Hieroglyphs', 'Segoe UI Historic', serif";
+    } else {
+      ctx.fillStyle = obstacle.kind === "solid" ? "rgba(0, 0, 0, 0.35)" : "rgba(90, 0, 25, 0.3)";
+      ctx.fillRect(screenX, screenY, obstacle.size, obstacle.size);
+      ctx.font = "18px monospace";
+    }
 
     ctx.fillStyle = obstacle.color;
     ctx.fillText(obstacle.symbol, screenX + obstacle.size / 2, screenY + obstacle.size / 2 + 1);
@@ -68,6 +77,7 @@ function createObstacleChunk(chunkX, chunkY) {
   addGeneratedRun(obstacles, chunkX, chunkY, "cactus", 1);
   addGeneratedCluster(obstacles, chunkX, chunkY, "thorns", 2);
   addGeneratedCluster(obstacles, chunkX, chunkY, "stone", 3);
+  addGlyphRuin(obstacles, chunkX, chunkY);
 
   return { x: chunkX, y: chunkY, obstacles };
 }
@@ -99,6 +109,36 @@ function addGeneratedCluster(obstacles, chunkX, chunkY, type, salt) {
   }
 }
 
+function addGlyphRuin(obstacles, chunkX, chunkY) {
+  if (seededNoise(chunkX, chunkY, 100) < 0.72) return;
+
+  const width = 5 + Math.floor(seededNoise(chunkX, chunkY, 101) * 5);
+  const height = 4 + Math.floor(seededNoise(chunkX, chunkY, 102) * 4);
+  const baseX = Math.floor(seededNoise(chunkX, chunkY, 103) * (CHUNK_SIZE_TILES - width));
+  const baseY = Math.floor(seededNoise(chunkX, chunkY, 104) * (CHUNK_SIZE_TILES - height));
+  const gapSide = Math.floor(seededNoise(chunkX, chunkY, 105) * 4);
+  const gapOffset = 1 + Math.floor(seededNoise(chunkX, chunkY, 106) * Math.max(1, (gapSide < 2 ? width : height) - 2));
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const onTop = y === 0;
+      const onBottom = y === height - 1;
+      const onLeft = x === 0;
+      const onRight = x === width - 1;
+      const onWall = onTop || onBottom || onLeft || onRight;
+      const isGap =
+        (gapSide === 0 && onTop && x === gapOffset) ||
+        (gapSide === 1 && onBottom && x === gapOffset) ||
+        (gapSide === 2 && onLeft && y === gapOffset) ||
+        (gapSide === 3 && onRight && y === gapOffset);
+
+      if (onWall && !isGap) {
+        addGlyphObstacle(obstacles, chunkX, chunkY, baseX + x, baseY + y, x, y);
+      }
+    }
+  }
+}
+
 function addObstacle(obstacles, type, chunkX, chunkY, localTileX, localTileY) {
   const obstacle = {
     ...OBSTACLE_TYPES[type],
@@ -108,6 +148,22 @@ function addObstacle(obstacles, type, chunkX, chunkY, localTileX, localTileY) {
   };
 
   if (Math.hypot(obstacle.x - PLAYER_START.x, obstacle.y - PLAYER_START.y) > 160) {
+    obstacles.push(obstacle);
+  }
+}
+
+function addGlyphObstacle(obstacles, chunkX, chunkY, localTileX, localTileY, dx, dy) {
+  const glyphIndex = Math.floor(seededNoise(chunkX + dx, chunkY + dy, 107) * HIEROGLYPHS.length);
+  const obstacle = {
+    ...OBSTACLE_TYPES.hieroglyph,
+    symbol: HIEROGLYPHS[glyphIndex],
+    x: (chunkX * CHUNK_SIZE_TILES + localTileX) * TILE_SIZE,
+    y: (chunkY * CHUNK_SIZE_TILES + localTileY) * TILE_SIZE,
+    size: TILE_SIZE,
+    structure: "glyph-ruin"
+  };
+
+  if (Math.hypot(obstacle.x - PLAYER_START.x, obstacle.y - PLAYER_START.y) > 180) {
     obstacles.push(obstacle);
   }
 }
@@ -130,9 +186,4 @@ function rectsOverlap(a, b) {
     a.y < b.y + b.size &&
     a.y + a.size > b.y
   );
-}
-
-function seededNoise(x, y, salt) {
-  const value = Math.sin(x * 127.1 + y * 311.7 + salt * 74.7) * 43758.5453;
-  return value - Math.floor(value);
 }
