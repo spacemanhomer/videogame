@@ -1,5 +1,5 @@
-import { SHOT_RANGE, TERRAIN_SPEEDS } from "./constants.js";
-import { drawObstacles } from "./obstacles.js";
+import { ENEMY_GLYPH, PLAYER_GLYPH, SHOT_RANGE, SHOT_SIZE, TERRAIN_SPEEDS } from "./constants.js";
+import { collidesWithSolidObstacle, drawObstacles } from "./obstacles.js";
 import { drawTerrain, terrainAt } from "./terrain.js";
 
 export function renderGame(ctx, state) {
@@ -45,11 +45,8 @@ function drawAimLine(ctx, state) {
   const dx = state.aim.x - origin.x;
   const dy = state.aim.y - origin.y;
   const distance = Math.hypot(dx, dy) || 1;
-  const length = Math.min(distance, SHOT_RANGE);
-  const end = {
-    x: origin.x + (dx / distance) * length,
-    y: origin.y + (dy / distance) * length
-  };
+  const direction = { x: dx / distance, y: dy / distance };
+  const end = slingshotEndPoint(origin, direction, state.obstacles);
 
   ctx.strokeStyle = "rgba(245, 234, 210, 0.45)";
   ctx.lineWidth = 2;
@@ -62,13 +59,14 @@ function drawAimLine(ctx, state) {
 function drawPlayer(ctx, player) {
   ctx.fillStyle = "cyan";
   ctx.fillRect(player.x, player.y, player.size, player.size);
+  drawGlyph(ctx, PLAYER_GLYPH, player, "#06151a", 18);
 }
 
 function drawEnemies(ctx, enemies) {
-  ctx.fillStyle = "red";
-
   for (const enemy of enemies) {
+    ctx.fillStyle = "red";
     ctx.fillRect(enemy.x, enemy.y, enemy.size, enemy.size);
+    drawGlyph(ctx, ENEMY_GLYPH, enemy, "#260000", 19);
   }
 }
 
@@ -77,4 +75,40 @@ function drawTerrainReadout(ctx, state) {
 
   ctx.fillStyle = "white";
   ctx.fillText("terrain speed x" + TERRAIN_SPEEDS[kind], 10, 20);
+}
+
+function drawGlyph(ctx, glyph, entity, color, size) {
+  ctx.save();
+  ctx.fillStyle = color;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.font = `${size}px serif`;
+  ctx.fillText(glyph, entity.x + entity.size / 2, entity.y + entity.size / 2 + 1);
+  ctx.restore();
+}
+
+function slingshotEndPoint(origin, direction, obstacles) {
+  const step = Math.max(2, SHOT_SIZE / 2);
+  let end = origin;
+
+  for (let traveled = step; traveled <= SHOT_RANGE; traveled += step) {
+    const candidate = {
+      x: origin.x + direction.x * traveled,
+      y: origin.y + direction.y * traveled,
+      size: SHOT_SIZE
+    };
+
+    if (collidesWithSolidObstacle(centeredRect(candidate), obstacles)) break;
+    end = { x: candidate.x, y: candidate.y };
+  }
+
+  return end;
+}
+
+function centeredRect(point) {
+  return {
+    x: point.x - point.size / 2,
+    y: point.y - point.size / 2,
+    size: point.size
+  };
 }
