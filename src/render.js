@@ -14,10 +14,34 @@ export function renderGame(ctx, state, canvas) {
 }
 
 function drawRelics(ctx, relics, camera) {
-  ctx.fillStyle = "gold";
-
   for (const relic of relics) {
-    ctx.fillRect(relic.x - camera.x, relic.y - camera.y, relic.size, relic.size);
+    const screenX = relic.x - camera.x;
+    const screenY = relic.y - camera.y;
+    const centerX = screenX + relic.size / 2;
+    const centerY = screenY + relic.size / 2;
+
+    ctx.save();
+    ctx.fillStyle = relic.aura || "rgba(255, 215, 0, 0.28)";
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, relic.size * 0.85, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = relic.color || "#ffd700";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(centerX, screenY - 2);
+    ctx.lineTo(centerX, screenY + relic.size + 2);
+    ctx.moveTo(screenX - 2, centerY);
+    ctx.lineTo(screenX + relic.size + 2, centerY);
+    ctx.stroke();
+
+    ctx.fillStyle = relic.color || "#ffd700";
+    ctx.beginPath();
+    ctx.roundRect(screenX + 2, screenY + 2, relic.size - 4, relic.size - 4, 4);
+    ctx.fill();
+
+    drawGlyph(ctx, relic.glyph || "✦", { x: screenX, y: screenY, size: relic.size }, relic.fill || "#fff8bf", relic.stroke || "#4a3000", 18);
+    ctx.restore();
   }
 }
 
@@ -84,7 +108,7 @@ function drawGlyph(ctx, glyph, entity, fill, stroke, size) {
   ctx.save();
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.font = `700 ${size}px Georgia, 'Times New Roman', serif`;
+  ctx.font = `700 ${size}px Georgia, 'Times New Roman', 'Segoe UI Historic', serif`;
   ctx.lineWidth = 3;
   ctx.strokeStyle = stroke;
   ctx.fillStyle = fill;
