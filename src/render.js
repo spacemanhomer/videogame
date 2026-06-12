@@ -1,6 +1,6 @@
-import { PLAYER_GLYPH, SHOT_RANGE, SHOT_SIZE, TERRAIN_SPEEDS } from "./constants.js";
+import { PLAYER_GLYPH, SHOT_RANGE, SHOT_SIZE } from "./constants.js";
 import { collidesWithSolidObstacle, drawObstacles } from "./obstacles.js";
-import { drawTerrain, terrainAt } from "./terrain.js";
+import { drawTerrain, terrainMaterialAt } from "./terrain.js";
 
 export function renderGame(ctx, state, canvas) {
   drawTerrain(ctx, state, canvas);
@@ -75,10 +75,10 @@ function drawEnemies(ctx, enemies, camera) {
 }
 
 function drawTerrainReadout(ctx, state) {
-  const kind = terrainAt(state.terrain, state.player.x + 10, state.player.y + 10);
+  const material = terrainMaterialAt(state.terrain, state.player.x + 10, state.player.y + 10);
 
   ctx.fillStyle = "white";
-  ctx.fillText("terrain speed x" + TERRAIN_SPEEDS[kind] + " | " + state.currentEcosystem, 10, 20);
+  ctx.fillText(material.name + " x" + material.speed + " | " + state.currentEcosystem, 10, 20);
 }
 
 function drawGlyph(ctx, glyph, entity, fill, stroke, size) {
