@@ -16,7 +16,7 @@ import { ecosystemAt } from "./ecosystems.js";
 import { createRelic, placeRelic, resetPlayer, spawnEnemy, touches } from "./entities.js";
 import { activeObstacles, collidesWithPainfulObstacle, collidesWithSolidObstacle, createObstacleChunks, updateObstacleChunks } from "./obstacles.js";
 import { copyState, createInitialState } from "./state.js";
-import { createTerrainChunks, terrainSpeedAt, updateTerrainChunks } from "./terrain.js";
+import { createTerrainChunks, isImpassableWater, isPainfulWater, terrainSpeedAt, updateTerrainChunks } from "./terrain.js";
 
 export function resetGame(canvas, existingState = createInitialState()) {
   const nextState = createInitialState();
@@ -50,7 +50,7 @@ export function updateGame(state, { canvas, input, hud }) {
   updateProjectiles(state);
   collectRelics(state, hud);
   updateEnemies(state, canvas, hud);
-  updateObstacleDamage(state, canvas, hud);
+  updateTerrainDamage(state, canvas, hud);
   replenishNearbySpawns(state);
 }
 
@@ -79,10 +79,14 @@ function movePlayer(state, input) {
   if (input.isPressed("d", "arrowright")) next.x += speed;
 
   const xMove = { ...state.player, x: next.x };
-  if (!collidesWithSolidObstacle(xMove, state.obstacles)) state.player.x = next.x;
+  if (!isBlockedByWorld(state, xMove)) state.player.x = next.x;
 
   const yMove = { ...state.player, y: next.y };
-  if (!collidesWithSolidObstacle(yMove, state.obstacles)) state.player.y = next.y;
+  if (!isBlockedByWorld(state, yMove)) state.player.y = next.y;
+}
+
+function isBlockedByWorld(state, rect) {
+  return collidesWithSolidObstacle(rect, state.obstacles) || isImpassableWater(state.terrain, rect);
 }
 
 function fireSlingshot(state, input) {
@@ -177,8 +181,9 @@ function updateEnemies(state, canvas, hud) {
   }
 }
 
-function updateObstacleDamage(state, canvas, hud) {
-  if (!collidesWithPainfulObstacle(state.player, state.obstacles)) return;
+function updateTerrainDamage(state, canvas, hud) {
+  const takesDamage = collidesWithPainfulObstacle(state.player, state.obstacles) || isPainfulWater(state.terrain, state.player);
+  if (!takesDamage) return;
 
   const now = Date.now();
   if (now - state.lastObstacleDamageAt < OBSTACLE_DAMAGE_COOLDOWN) return;
