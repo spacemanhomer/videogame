@@ -1,4 +1,5 @@
-import { ENEMY_GLYPH, PLAYER_GLYPH, SHOT_RANGE, SHOT_SIZE, TERRAIN_SPEEDS } from "./constants.js";
+import { PLAYER_GLYPH, SHOT_RANGE, SHOT_SIZE, TERRAIN_SPEEDS } from "./constants.js";
+import { ecosystemAt } from "./ecosystems.js";
 import { collidesWithSolidObstacle, drawObstacles } from "./obstacles.js";
 import { drawTerrain, terrainAt } from "./terrain.js";
 
@@ -68,17 +69,18 @@ function drawEnemies(ctx, enemies, camera) {
   for (const enemy of enemies) {
     const screenEnemy = toScreenRect(enemy, camera);
 
-    ctx.fillStyle = "red";
+    ctx.fillStyle = enemy.color || "red";
     ctx.fillRect(screenEnemy.x, screenEnemy.y, screenEnemy.size, screenEnemy.size);
-    drawGlyph(ctx, ENEMY_GLYPH, screenEnemy, "#fff1c7", "#260000", 19);
+    drawGlyph(ctx, enemy.glyph || "☥", screenEnemy, enemy.fill || "#fff1c7", enemy.stroke || "#260000", 19);
   }
 }
 
 function drawTerrainReadout(ctx, state) {
   const kind = terrainAt(state.terrain, state.player.x + 10, state.player.y + 10);
+  const ecosystem = ecosystemAt(state.player.x, state.player.y).name;
 
   ctx.fillStyle = "white";
-  ctx.fillText("terrain speed x" + TERRAIN_SPEEDS[kind], 10, 20);
+  ctx.fillText("terrain speed x" + TERRAIN_SPEEDS[kind] + " | " + ecosystem, 10, 20);
 }
 
 function drawGlyph(ctx, glyph, entity, fill, stroke, size) {
