@@ -54,7 +54,7 @@ export const ECOSYSTEMS = Object.freeze({
 export const ENEMY_TYPES = Object.freeze({
   mummy: {
     id: "mummy",
-    glyph: "☥",
+    glyph: "𓋹",
     color: "#b9352b",
     fill: "#fff1c7",
     stroke: "#260000",
@@ -67,7 +67,7 @@ export const ENEMY_TYPES = Object.freeze({
   },
   scarab: {
     id: "scarab",
-    glyph: "✹",
+    glyph: "𓆣",
     color: "#8f2fd0",
     fill: "#f6ddff",
     stroke: "#240034",
@@ -80,7 +80,7 @@ export const ENEMY_TYPES = Object.freeze({
   },
   jackal: {
     id: "jackal",
-    glyph: "♞",
+    glyph: "𓃥",
     color: "#c46a20",
     fill: "#ffe4b5",
     stroke: "#331700",
@@ -93,7 +93,7 @@ export const ENEMY_TYPES = Object.freeze({
   },
   thornling: {
     id: "thornling",
-    glyph: "♣",
+    glyph: "𓇗",
     color: "#2f8f4e",
     fill: "#e4ffd8",
     stroke: "#06240d",
@@ -106,7 +106,7 @@ export const ENEMY_TYPES = Object.freeze({
   },
   wraith: {
     id: "wraith",
-    glyph: "☽",
+    glyph: "𓂀",
     color: "#5366c9",
     fill: "#eef2ff",
     stroke: "#070b2c",
