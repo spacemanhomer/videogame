@@ -1,8 +1,8 @@
-import { PLAYER_START } from "./constants.js";
+import { PLAYER_START, SPAWN_RADIUS } from "./constants.js";
 import { collidesWithSolidObstacle } from "./obstacles.js";
 
-export function spawnEnemy(canvas, obstacles = []) {
-  const position = randomOpenPosition(canvas, 20, obstacles);
+export function spawnEnemy(anchor, obstacles = []) {
+  const position = randomOpenPosition(anchor, 20, obstacles, 140);
 
   return {
     x: position.x,
@@ -13,14 +13,14 @@ export function spawnEnemy(canvas, obstacles = []) {
   };
 }
 
-export function createRelic(canvas, obstacles = []) {
-  const relic = { x: 400, y: 240, size: 14 };
-  placeRelic(relic, canvas, obstacles);
+export function createRelic(anchor, obstacles = []) {
+  const relic = { x: anchor.x, y: anchor.y, size: 14 };
+  placeRelic(relic, anchor, obstacles);
   return relic;
 }
 
-export function placeRelic(relic, canvas, obstacles = []) {
-  const position = randomOpenPosition(canvas, relic.size, obstacles);
+export function placeRelic(relic, anchor, obstacles = []) {
+  const position = randomOpenPosition(anchor, relic.size, obstacles, 90);
   relic.x = position.x;
   relic.y = position.y;
 }
@@ -39,24 +39,21 @@ export function touches(a, b) {
   );
 }
 
-function randomOpenPosition(canvas, size, obstacles) {
-  for (let attempt = 0; attempt < 80; attempt++) {
+function randomOpenPosition(anchor, size, obstacles, minDistance) {
+  for (let attempt = 0; attempt < 100; attempt++) {
+    const angle = Math.random() * Math.PI * 2;
+    const radius = minDistance + Math.random() * (SPAWN_RADIUS - minDistance);
     const position = {
-      x: Math.random() * (canvas.width - size),
-      y: Math.random() * (canvas.height - size)
+      x: anchor.x + Math.cos(angle) * radius,
+      y: anchor.y + Math.sin(angle) * radius
     };
 
     const rect = { ...position, size };
-    const tooCloseToStart = distance(position, PLAYER_START) < 90;
 
-    if (!tooCloseToStart && !collidesWithSolidObstacle(rect, obstacles)) {
+    if (!collidesWithSolidObstacle(rect, obstacles)) {
       return position;
     }
   }
 
-  return { x: canvas.width - 60, y: canvas.height - 60 };
-}
-
-function distance(a, b) {
-  return Math.hypot(a.x - b.x, a.y - b.y);
+  return { x: anchor.x + minDistance, y: anchor.y + minDistance };
 }
