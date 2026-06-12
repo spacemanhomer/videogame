@@ -1,4 +1,4 @@
-import { PLAYER_START } from "./constants.js";
+import { PLAYER_MAX_HEALTH, PLAYER_START } from "./constants.js";
 
 export function createInitialState() {
   return {
@@ -8,7 +8,7 @@ export function createInitialState() {
     camera: { x: 0, y: 0 },
     currentEcosystem: "scrub",
     score: 0,
-    health: 3,
+    health: PLAYER_MAX_HEALTH,
     level: 1,
     player: { x: PLAYER_START.x, y: PLAYER_START.y, size: 20 },
     relics: [],
@@ -16,6 +16,7 @@ export function createInitialState() {
     projectiles: [],
     aim: { x: PLAYER_START.x + 80, y: PLAYER_START.y },
     lastShotAt: 0,
+    lastBuckshotAt: 0,
     lastObstacleDamageAt: 0
   };
 }
@@ -35,6 +36,7 @@ export function copyState(target, source) {
   target.projectiles = source.projectiles;
   target.aim = source.aim;
   target.lastShotAt = source.lastShotAt;
+  target.lastBuckshotAt = source.lastBuckshotAt;
   target.lastObstacleDamageAt = source.lastObstacleDamageAt;
 
   return target;
