@@ -59,14 +59,14 @@ function drawAimLine(ctx, state) {
 function drawPlayer(ctx, player) {
   ctx.fillStyle = "cyan";
   ctx.fillRect(player.x, player.y, player.size, player.size);
-  drawGlyph(ctx, PLAYER_GLYPH, player, "#06151a", 18);
+  drawGlyph(ctx, PLAYER_GLYPH, player, "#f9ffff", "#06151a", 19);
 }
 
 function drawEnemies(ctx, enemies) {
   for (const enemy of enemies) {
     ctx.fillStyle = "red";
     ctx.fillRect(enemy.x, enemy.y, enemy.size, enemy.size);
-    drawGlyph(ctx, ENEMY_GLYPH, enemy, "#260000", 19);
+    drawGlyph(ctx, ENEMY_GLYPH, enemy, "#fff1c7", "#260000", 19);
   }
 }
 
@@ -77,12 +77,15 @@ function drawTerrainReadout(ctx, state) {
   ctx.fillText("terrain speed x" + TERRAIN_SPEEDS[kind], 10, 20);
 }
 
-function drawGlyph(ctx, glyph, entity, color, size) {
+function drawGlyph(ctx, glyph, entity, fill, stroke, size) {
   ctx.save();
-  ctx.fillStyle = color;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.font = `${size}px serif`;
+  ctx.font = `700 ${size}px Georgia, 'Times New Roman', serif`;
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = stroke;
+  ctx.fillStyle = fill;
+  ctx.strokeText(glyph, entity.x + entity.size / 2, entity.y + entity.size / 2 + 1);
   ctx.fillText(glyph, entity.x + entity.size / 2, entity.y + entity.size / 2 + 1);
   ctx.restore();
 }
