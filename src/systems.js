@@ -47,7 +47,7 @@ export function updateGame(state, { canvas, input, hud }) {
   fireSlingshot(state, input);
   updateProjectiles(state);
   collectRelics(state, hud);
-  updateEnemies(state, hud);
+  updateEnemies(state, canvas, hud);
   updateObstacleDamage(state, canvas, hud);
   replenishNearbySpawns(state);
 }
@@ -152,7 +152,7 @@ function collectRelics(state, hud) {
   if (collected) hud.update(state);
 }
 
-function updateEnemies(state, hud) {
+function updateEnemies(state, canvas, hud) {
   for (const enemy of state.enemies) {
     seekPlayer(enemy, state.player);
     moveEnemy(enemy, state.obstacles);
@@ -161,8 +161,9 @@ function updateEnemies(state, hud) {
       state.health--;
       resetPlayer(state.player);
       loadWorldAroundPlayer(state);
+      centerCamera(state, canvas);
 
-      if (state.health <= 0) resetGame({ width: 800, height: 500 }, state);
+      if (state.health <= 0) resetGame(canvas, state);
       hud.update(state);
     }
   }
