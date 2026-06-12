@@ -4,6 +4,8 @@ export const GRID_ROWS = 25;
 
 export const PLAYER_START = Object.freeze({ x: 80, y: 80 });
 export const PLAYER_BASE_SPEED = 4;
+export const PLAYER_GLYPH = "🦸";
+export const ENEMY_GLYPH = "𓀀";
 export const LEVEL_UP_INTERVAL = 3;
 export const INITIAL_ENEMY_COUNT = 3;
 export const INITIAL_RELIC_COUNT = 4;
