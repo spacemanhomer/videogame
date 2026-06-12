@@ -46,11 +46,11 @@ export function terrainSpeedAt(chunks, entity) {
 }
 
 export function isImpassableWater(chunks, rect) {
-  return waterWidthAtRect(chunks, rect) >= 3;
+  return waterMassAtRect(chunks, rect) >= 3;
 }
 
 export function isPainfulWater(chunks, rect) {
-  return waterWidthAtRect(chunks, rect) === 2;
+  return waterMassAtRect(chunks, rect) === 2;
 }
 
 export function drawTerrain(ctx, state, canvas) {
@@ -103,7 +103,7 @@ function createChunk(chunkX, chunkY) {
   return { x: chunkX, y: chunkY, tiles };
 }
 
-function waterWidthAtRect(chunks, rect) {
+function waterMassAtRect(chunks, rect) {
   const points = [
     { x: rect.x + rect.size / 2, y: rect.y + rect.size / 2 },
     { x: rect.x + 2, y: rect.y + rect.size / 2 },
@@ -112,33 +112,36 @@ function waterWidthAtRect(chunks, rect) {
     { x: rect.x + rect.size / 2, y: rect.y + rect.size - 2 }
   ];
 
-  return Math.max(...points.map(point => waterWidthAtPoint(chunks, point.x, point.y)));
+  return Math.max(...points.map(point => connectedWaterMassAtPoint(chunks, point.x, point.y)));
 }
 
-function waterWidthAtPoint(chunks, x, y) {
-  const tileX = Math.floor(x / TILE_SIZE);
-  const tileY = Math.floor(y / TILE_SIZE);
+function connectedWaterMassAtPoint(chunks, x, y) {
+  const start = {
+    x: Math.floor(x / TILE_SIZE),
+    y: Math.floor(y / TILE_SIZE)
+  };
 
-  if (terrainKindAtTile(tileX, tileY) !== WATER_KIND) return 0;
+  if (terrainKindAtTile(start.x, start.y) !== WATER_KIND) return 0;
 
-  return Math.min(countWater(tileX, tileY, 1, 0), countWater(tileX, tileY, 0, 1));
-}
+  const seen = new Set();
+  const queue = [start];
 
-function countWater(tileX, tileY, stepX, stepY) {
-  let count = 1;
+  while (queue.length > 0 && seen.size < 3) {
+    const tile = queue.shift();
+    const key = `${tile.x},${tile.y}`;
 
-  for (let direction of [-1, 1]) {
-    let x = tileX + stepX * direction;
-    let y = tileY + stepY * direction;
+    if (seen.has(key) || terrainKindAtTile(tile.x, tile.y) !== WATER_KIND) continue;
+    seen.add(key);
 
-    while (terrainKindAtTile(x, y) === WATER_KIND) {
-      count++;
-      x += stepX * direction;
-      y += stepY * direction;
-    }
+    queue.push(
+      { x: tile.x + 1, y: tile.y },
+      { x: tile.x - 1, y: tile.y },
+      { x: tile.x, y: tile.y + 1 },
+      { x: tile.x, y: tile.y - 1 }
+    );
   }
 
-  return count;
+  return seen.size;
 }
 
 function terrainKindAtWorld(x, y) {
