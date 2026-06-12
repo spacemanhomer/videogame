@@ -2,8 +2,10 @@ import { PLAYER_START } from "./constants.js";
 
 export function createInitialState() {
   return {
-    terrain: [],
+    terrain: new Map(),
+    obstacleChunks: new Map(),
     obstacles: [],
+    camera: { x: 0, y: 0 },
     score: 0,
     health: 3,
     level: 1,
@@ -19,7 +21,9 @@ export function createInitialState() {
 
 export function copyState(target, source) {
   target.terrain = source.terrain;
+  target.obstacleChunks = source.obstacleChunks;
   target.obstacles = source.obstacles;
+  target.camera = source.camera;
   target.score = source.score;
   target.health = source.health;
   target.level = source.level;
