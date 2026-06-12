@@ -1,15 +1,31 @@
 import { PLAYER_START, SPAWN_RADIUS } from "./constants.js";
+import { ecosystemAt, pickEnemyTypeFor } from "./ecosystems.js";
 import { collidesWithSolidObstacle } from "./obstacles.js";
 
 export function spawnEnemy(anchor, obstacles = []) {
   const position = randomOpenPosition(anchor, 20, obstacles, 140);
+  const type = pickEnemyTypeFor(position);
+  const ecosystem = ecosystemAt(position.x, position.y);
 
   return {
     x: position.x,
     y: position.y,
     size: 20,
     vx: 0,
-    vy: 0
+    vy: 0,
+    type: type.id,
+    ecosystem: ecosystem.name,
+    glyph: type.glyph,
+    color: type.color,
+    fill: type.fill,
+    stroke: type.stroke,
+    speed: type.speed,
+    hp: type.hp,
+    damage: type.damage,
+    wobble: type.wobble,
+    orbit: type.orbit,
+    ignoresWalls: type.ignoresWalls,
+    phase: Math.random() * Math.PI * 2
   };
 }
 
