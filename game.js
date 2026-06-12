@@ -23,5 +23,5 @@ document.getElementById("restart").addEventListener("click", () => {
 
 createGameLoop({
   update: () => updateGame(state, { canvas, input, hud }),
-  render: () => renderGame(ctx, state)
+  render: () => renderGame(ctx, state, canvas)
 }).start();
