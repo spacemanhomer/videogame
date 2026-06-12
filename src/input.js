@@ -41,5 +41,6 @@ export function createInputController(target, pointerTarget) {
 
 function normalizeKey(event) {
   if (event.code === "Space") return "space";
+  if (event.key === "Shift") return "shift";
   return event.key.toLowerCase();
 }
