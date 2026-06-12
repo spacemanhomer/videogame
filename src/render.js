@@ -22,9 +22,8 @@ function drawRelics(ctx, relics, camera) {
 }
 
 function drawProjectiles(ctx, projectiles, camera) {
-  ctx.fillStyle = "#f5ead2";
-
   for (const projectile of projectiles) {
+    ctx.fillStyle = projectile.kind === "buckshot" ? "#fffbad" : "#f5ead2";
     ctx.beginPath();
     ctx.arc(
       projectile.x - camera.x + projectile.size / 2,
