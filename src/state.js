@@ -1,7 +1,9 @@
 import { PLAYER_MAX_HEALTH, PLAYER_START } from "./constants.js";
+import { getWorldSeed } from "./worldSeed.js";
 
 export function createInitialState() {
   return {
+    worldSeed: getWorldSeed(),
     terrain: new Map(),
     obstacleChunks: new Map(),
     obstacles: [],
@@ -22,6 +24,7 @@ export function createInitialState() {
 }
 
 export function copyState(target, source) {
+  target.worldSeed = source.worldSeed;
   target.terrain = source.terrain;
   target.obstacleChunks = source.obstacleChunks;
   target.obstacles = source.obstacles;
