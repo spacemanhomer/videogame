@@ -1,7 +1,6 @@
 import {
   DESPAWN_RADIUS,
   ENEMIES_PER_LEVEL,
-  ENEMY_SEEK_SPEED,
   INITIAL_ENEMY_COUNT,
   INITIAL_RELIC_COUNT,
   LEVEL_UP_INTERVAL,
@@ -119,7 +118,8 @@ function updateProjectiles(state) {
 
     const hitIndex = state.enemies.findIndex(enemy => touches(projectile, enemy));
     if (hitIndex !== -1) {
-      state.enemies.splice(hitIndex, 1);
+      state.enemies[hitIndex].hp--;
+      if (state.enemies[hitIndex].hp <= 0) state.enemies.splice(hitIndex, 1);
       continue;
     }
 
@@ -154,11 +154,11 @@ function collectRelics(state, hud) {
 
 function updateEnemies(state, canvas, hud) {
   for (const enemy of state.enemies) {
-    seekPlayer(enemy, state.player);
+    steerEnemy(enemy, state.player);
     moveEnemy(enemy, state.obstacles);
 
     if (touches(state.player, enemy)) {
-      state.health--;
+      state.health -= enemy.damage || 1;
       resetPlayer(state.player);
       loadWorldAroundPlayer(state);
       centerCamera(state, canvas);
@@ -196,27 +196,35 @@ function replenishNearbySpawns(state) {
   ));
 }
 
-function seekPlayer(enemy, player) {
+function steerEnemy(enemy, player) {
   const enemyCenter = centerOf(enemy);
   const playerCenter = centerOf(player);
   const dx = playerCenter.x - enemyCenter.x;
   const dy = playerCenter.y - enemyCenter.y;
   const distance = Math.hypot(dx, dy) || 1;
+  const direct = { x: dx / distance, y: dy / distance };
+  const side = { x: -direct.y, y: direct.x };
+  const pulse = Math.sin(Date.now() / 260 + enemy.phase);
+  const sidePressure = (enemy.wobble || 0) * pulse + (enemy.orbit || 0);
+  const move = normalize({
+    x: direct.x + side.x * sidePressure,
+    y: direct.y + side.y * sidePressure
+  });
 
-  enemy.vx = (dx / distance) * ENEMY_SEEK_SPEED;
-  enemy.vy = (dy / distance) * ENEMY_SEEK_SPEED;
+  enemy.vx = move.x * enemy.speed;
+  enemy.vy = move.y * enemy.speed;
 }
 
 function moveEnemy(enemy, obstacles) {
   const xMove = { ...enemy, x: enemy.x + enemy.vx };
 
-  if (!collidesWithSolidObstacle(xMove, obstacles)) {
+  if (enemy.ignoresWalls || !collidesWithSolidObstacle(xMove, obstacles)) {
     enemy.x = xMove.x;
   }
 
   const yMove = { ...enemy, y: enemy.y + enemy.vy };
 
-  if (!collidesWithSolidObstacle(yMove, obstacles)) {
+  if (enemy.ignoresWalls || !collidesWithSolidObstacle(yMove, obstacles)) {
     enemy.y = yMove.y;
   }
 }
@@ -243,4 +251,12 @@ function centerOf(entity) {
 
 function distanceBetween(a, b) {
   return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+function normalize(vector) {
+  const length = Math.hypot(vector.x, vector.y) || 1;
+  return {
+    x: vector.x / length,
+    y: vector.y / length
+  };
 }
