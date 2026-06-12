@@ -4,6 +4,7 @@ import {
   TILE_SIZE
 } from "./constants.js";
 import { ecosystemAt, materialFor } from "./ecosystems.js";
+import { seededNoise } from "./worldSeed.js";
 
 const CHUNK_SIZE_PIXELS = CHUNK_SIZE_TILES * TILE_SIZE;
 const WATER_KIND = 5;
@@ -152,9 +153,9 @@ function terrainKindAtTile(tileX, tileY) {
   if (isWaterTile(tileX, tileY)) return WATER_KIND;
 
   const value =
-    Math.sin(tileX * 0.23) +
-    Math.cos(tileY * 0.19) +
-    seededNoise(tileX, tileY) * 2;
+    Math.sin(tileX * 0.23 + seededNoise(0, 0, 21)) +
+    Math.cos(tileY * 0.19 + seededNoise(0, 0, 22)) +
+    seededNoise(tileX, tileY, 23) * 2;
 
   if (value > 3) return 1;
   if (value > 2) return 2;
@@ -164,15 +165,15 @@ function terrainKindAtTile(tileX, tileY) {
 }
 
 function isWaterTile(tileX, tileY) {
-  const riverA = Math.abs(tileY - Math.round(Math.sin(tileX * 0.075) * 12 + seededNoise(Math.floor(tileX / 16), 7) * 16));
-  const riverB = Math.abs(tileX - Math.round(Math.cos(tileY * 0.065) * 15 + seededNoise(11, Math.floor(tileY / 16)) * 18));
-  const lake = seededNoise(Math.floor(tileX / 9), Math.floor(tileY / 9)) > 0.86 && seededNoise(tileX, tileY) > 0.45;
+  const riverA = Math.abs(tileY - Math.round(Math.sin(tileX * 0.075 + seededNoise(0, 0, 31)) * 12 + seededNoise(Math.floor(tileX / 16), 7, 32) * 16));
+  const riverB = Math.abs(tileX - Math.round(Math.cos(tileY * 0.065 + seededNoise(0, 0, 33)) * 15 + seededNoise(11, Math.floor(tileY / 16), 34) * 18));
+  const lake = seededNoise(Math.floor(tileX / 9), Math.floor(tileY / 9), 35) > 0.86 && seededNoise(tileX, tileY, 36) > 0.45;
 
-  return riverA < waterBand(tileX, 0) || riverB < waterBand(tileY, 1) || lake;
+  return riverA < waterBand(tileX, 37) || riverB < waterBand(tileY, 38) || lake;
 }
 
 function waterBand(tile, salt) {
-  return 1 + Math.floor(seededNoise(Math.floor(tile / 24), salt) * 3);
+  return 1 + Math.floor(seededNoise(Math.floor(tile / 24), salt, 39) * 3);
 }
 
 function chunkForWorld(x, y) {
@@ -184,9 +185,4 @@ function chunkForWorld(x, y) {
 
 function chunkKey(x, y) {
   return `${x},${y}`;
-}
-
-function seededNoise(x, y) {
-  const value = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
-  return value - Math.floor(value);
 }
