@@ -12,6 +12,7 @@ import {
   SHOT_SIZE,
   SHOT_SPEED
 } from "./constants.js";
+import { ecosystemAt } from "./ecosystems.js";
 import { createRelic, placeRelic, resetPlayer, spawnEnemy, touches } from "./entities.js";
 import { activeObstacles, collidesWithPainfulObstacle, collidesWithSolidObstacle, createObstacleChunks, updateObstacleChunks } from "./obstacles.js";
 import { copyState, createInitialState } from "./state.js";
@@ -40,8 +41,10 @@ export function updateGame(state, { canvas, input, hud }) {
   state.aim = screenToWorld(input.getAimPoint(), state.camera);
 
   loadWorldAroundPlayer(state);
+  updateCurrentEcosystem(state);
   movePlayer(state, input);
   loadWorldAroundPlayer(state);
+  updateCurrentEcosystem(state);
   centerCamera(state, canvas);
   fireSlingshot(state, input);
   updateProjectiles(state);
@@ -55,6 +58,10 @@ function loadWorldAroundPlayer(state) {
   updateTerrainChunks(state.terrain, state.player);
   updateObstacleChunks(state.obstacleChunks, state.player);
   state.obstacles = activeObstacles(state.obstacleChunks);
+}
+
+function updateCurrentEcosystem(state) {
+  state.currentEcosystem = ecosystemAt(state.player.x, state.player.y).name;
 }
 
 function centerCamera(state, canvas) {
@@ -118,7 +125,7 @@ function updateProjectiles(state) {
 
     const hitIndex = state.enemies.findIndex(enemy => touches(projectile, enemy));
     if (hitIndex !== -1) {
-      state.enemies[hitIndex].hp--;
+      state.enemies[hitIndex].hp = (state.enemies[hitIndex].hp || 1) - 1;
       if (state.enemies[hitIndex].hp <= 0) state.enemies.splice(hitIndex, 1);
       continue;
     }
@@ -161,6 +168,7 @@ function updateEnemies(state, canvas, hud) {
       state.health -= enemy.damage || 1;
       resetPlayer(state.player);
       loadWorldAroundPlayer(state);
+      updateCurrentEcosystem(state);
       centerCamera(state, canvas);
 
       if (state.health <= 0) resetGame(canvas, state);
@@ -204,15 +212,15 @@ function steerEnemy(enemy, player) {
   const distance = Math.hypot(dx, dy) || 1;
   const direct = { x: dx / distance, y: dy / distance };
   const side = { x: -direct.y, y: direct.x };
-  const pulse = Math.sin(Date.now() / 260 + enemy.phase);
+  const pulse = Math.sin(Date.now() / 260 + (enemy.phase || 0));
   const sidePressure = (enemy.wobble || 0) * pulse + (enemy.orbit || 0);
   const move = normalize({
     x: direct.x + side.x * sidePressure,
     y: direct.y + side.y * sidePressure
   });
 
-  enemy.vx = move.x * enemy.speed;
-  enemy.vy = move.y * enemy.speed;
+  enemy.vx = move.x * (enemy.speed || 1.45);
+  enemy.vy = move.y * (enemy.speed || 1.45);
 }
 
 function moveEnemy(enemy, obstacles) {
