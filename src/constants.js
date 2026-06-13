@@ -1,10 +1,10 @@
 export const TILE_SIZE = 20;
-export const GRID_COLUMNS = 80;
-export const GRID_ROWS = 50;
+export const GRID_COLUMNS = 60;
+export const GRID_ROWS = 38;
 export const CHUNK_SIZE_TILES = 16;
 export const ACTIVE_CHUNK_RADIUS = 3;
-export const SPAWN_RADIUS = 1040;
-export const DESPAWN_RADIUS = 2400;
+export const SPAWN_RADIUS = 780;
+export const DESPAWN_RADIUS = 1800;
 
 export const PLAYER_START = Object.freeze({ x: 80, y: 80 });
 export const PLAYER_BASE_SPEED = 4;
