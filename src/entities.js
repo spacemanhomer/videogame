@@ -1,6 +1,7 @@
 import { PLAYER_START, SPAWN_RADIUS } from "./constants.js";
 import { ENEMY_TYPES, ecosystemAt, pickEnemyTypeFor } from "./ecosystems.js";
 import { collidesWithSolidObstacle } from "./obstacles.js";
+import { relicValueForLevel } from "./progression.js";
 import { seededNoise } from "./worldSeed.js";
 
 const RELIC_STYLES = Object.freeze([
@@ -36,7 +37,7 @@ export function spawnRuinZombie(position, phase = 0) {
   zombie.stroke = "#1c0029";
   zombie.speed = 1.15;
   zombie.hp = 2;
-  zombie.damage = 1;
+  zombie.damage = 2;
   zombie.wobble = 0.22;
   zombie.orbit = 0.08;
   zombie.phase = phase;
@@ -44,15 +45,16 @@ export function spawnRuinZombie(position, phase = 0) {
   return zombie;
 }
 
-export function createRelic(anchor, obstacles = []) {
+export function createRelic(anchor, obstacles = [], level = 1) {
   const relic = { x: anchor.x, y: anchor.y, size: 18, value: 1, ...pickRelicStyle(anchor) };
-  placeRelic(relic, anchor, obstacles);
+  placeRelic(relic, anchor, obstacles, level);
   return relic;
 }
 
-export function createRuinGem(ruin, index) {
+export function createRuinGem(ruin, index, level = 1) {
   const style = RUIN_GEMS[index % RUIN_GEMS.length];
-  const value = seededNoise(ruin.chunkX + index, ruin.chunkY, 410) > 0.48 ? 3 : 2;
+  const baseValue = relicValueForLevel(level, ruin.chunkX + index, ruin.chunkY + index);
+  const bonus = seededNoise(ruin.chunkX + index, ruin.chunkY, 410) > 0.48 ? 3 : 2;
   const x = ruin.innerX + seededNoise(ruin.chunkX + index, ruin.chunkY, 411) * Math.max(1, ruin.innerWidth - 24);
   const y = ruin.innerY + seededNoise(ruin.chunkX, ruin.chunkY + index, 412) * Math.max(1, ruin.innerHeight - 24);
 
@@ -62,15 +64,16 @@ export function createRuinGem(ruin, index) {
     x,
     y,
     size: 22,
-    value,
+    value: baseValue * bonus,
     ...style
   };
 }
 
-export function placeRelic(relic, anchor, obstacles = []) {
+export function placeRelic(relic, anchor, obstacles = [], level = 1) {
   const position = randomOpenPosition(anchor, relic.size, obstacles, 90);
   relic.x = position.x;
   relic.y = position.y;
+  relic.value = relicValueForLevel(level, Math.floor(position.x), Math.floor(position.y));
   Object.assign(relic, pickRelicStyle(position));
 }
 
