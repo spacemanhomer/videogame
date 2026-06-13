@@ -8,8 +8,11 @@ const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 const hud = createHud({
   score: document.getElementById("score"),
+  nextLevel: document.getElementById("next-level"),
   health: document.getElementById("health"),
-  level: document.getElementById("level")
+  level: document.getElementById("level"),
+  speed: document.getElementById("speed"),
+  damage: document.getElementById("damage")
 });
 const input = createInputController(document, canvas);
 const state = resetGame(canvas);
