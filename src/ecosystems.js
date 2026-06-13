@@ -60,7 +60,7 @@ export const ENEMY_TYPES = Object.freeze({
     stroke: "#260000",
     speed: 1.45,
     hp: 2,
-    damage: 1,
+    damage: 2,
     wobble: 0,
     orbit: 0,
     ignoresWalls: false
@@ -73,7 +73,7 @@ export const ENEMY_TYPES = Object.freeze({
     stroke: "#240034",
     speed: 2.25,
     hp: 1,
-    damage: 1,
+    damage: 2,
     wobble: 0.58,
     orbit: 0,
     ignoresWalls: false
@@ -86,7 +86,7 @@ export const ENEMY_TYPES = Object.freeze({
     stroke: "#331700",
     speed: 1.85,
     hp: 1,
-    damage: 1,
+    damage: 2,
     wobble: 0.15,
     orbit: 0.42,
     ignoresWalls: false
@@ -99,7 +99,7 @@ export const ENEMY_TYPES = Object.freeze({
     stroke: "#06240d",
     speed: 1.35,
     hp: 2,
-    damage: 1,
+    damage: 2,
     wobble: 0.82,
     orbit: -0.18,
     ignoresWalls: false
@@ -112,7 +112,7 @@ export const ENEMY_TYPES = Object.freeze({
     stroke: "#070b2c",
     speed: 1.18,
     hp: 3,
-    damage: 1,
+    damage: 2,
     wobble: 0.08,
     orbit: 0,
     ignoresWalls: true
