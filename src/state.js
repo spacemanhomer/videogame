@@ -20,6 +20,7 @@ export function createInitialState() {
     aim: { x: PLAYER_START.x + 80, y: PLAYER_START.y },
     lastShotAt: 0,
     lastBuckshotAt: 0,
+    lastEnemyDamageAt: 0,
     lastObstacleDamageAt: 0
   };
 }
@@ -42,6 +43,7 @@ export function copyState(target, source) {
   target.aim = source.aim;
   target.lastShotAt = source.lastShotAt;
   target.lastBuckshotAt = source.lastBuckshotAt;
+  target.lastEnemyDamageAt = source.lastEnemyDamageAt;
   target.lastObstacleDamageAt = source.lastObstacleDamageAt;
 
   return target;
