@@ -1,7 +1,11 @@
-import { PLAYER_MAX_HEALTH, PLAYER_START } from "./constants.js";
+import { PLAYER_START } from "./constants.js";
+import { maxHealthForLevel } from "./progression.js";
 import { getWorldSeed } from "./worldSeed.js";
 
 export function createInitialState() {
+  const level = 1;
+  const maxHealth = maxHealthForLevel(level);
+
   return {
     worldSeed: getWorldSeed(),
     terrain: new Map(),
@@ -13,9 +17,9 @@ export function createInitialState() {
     camera: { x: 0, y: 0 },
     currentEcosystem: "scrub",
     score: 0,
-    health: PLAYER_MAX_HEALTH,
-    maxHealth: PLAYER_MAX_HEALTH,
-    level: 1,
+    health: maxHealth,
+    maxHealth,
+    level,
     player: { x: PLAYER_START.x, y: PLAYER_START.y, size: 20 },
     relics: [],
     enemies: [],
