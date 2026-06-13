@@ -11,6 +11,7 @@ export function createInitialState() {
     currentEcosystem: "scrub",
     score: 0,
     health: PLAYER_MAX_HEALTH,
+    maxHealth: PLAYER_MAX_HEALTH,
     level: 1,
     player: { x: PLAYER_START.x, y: PLAYER_START.y, size: 20 },
     relics: [],
@@ -32,6 +33,7 @@ export function copyState(target, source) {
   target.currentEcosystem = source.currentEcosystem;
   target.score = source.score;
   target.health = source.health;
+  target.maxHealth = source.maxHealth;
   target.level = source.level;
   target.player = source.player;
   target.relics = source.relics;
