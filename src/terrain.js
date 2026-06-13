@@ -105,6 +105,8 @@ function createChunk(chunkX, chunkY) {
 }
 
 function waterMassAtRect(chunks, rect) {
+  if (crossesDiagonalLandCorner(rect)) return 0;
+
   const points = [
     { x: rect.x + rect.size / 2, y: rect.y + rect.size / 2 },
     { x: rect.x + 2, y: rect.y + rect.size / 2 },
@@ -114,6 +116,42 @@ function waterMassAtRect(chunks, rect) {
   ];
 
   return Math.max(...points.map(point => connectedWaterMassAtPoint(chunks, point.x, point.y)));
+}
+
+function crossesDiagonalLandCorner(rect) {
+  const minTileX = Math.floor(rect.x / TILE_SIZE) - 1;
+  const maxTileX = Math.floor((rect.x + rect.size) / TILE_SIZE);
+  const minTileY = Math.floor(rect.y / TILE_SIZE) - 1;
+  const maxTileY = Math.floor((rect.y + rect.size) / TILE_SIZE);
+
+  for (let tileY = minTileY; tileY <= maxTileY; tileY++) {
+    for (let tileX = minTileX; tileX <= maxTileX; tileX++) {
+      if (isDiagonalLandCorner(tileX, tileY)) {
+        const cornerX = (tileX + 1) * TILE_SIZE;
+        const cornerY = (tileY + 1) * TILE_SIZE;
+
+        if (
+          rect.x <= cornerX && rect.x + rect.size >= cornerX &&
+          rect.y <= cornerY && rect.y + rect.size >= cornerY
+        ) return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+function isDiagonalLandCorner(tileX, tileY) {
+  const topLeft = terrainKindAtTile(tileX, tileY);
+  const topRight = terrainKindAtTile(tileX + 1, tileY);
+  const bottomLeft = terrainKindAtTile(tileX, tileY + 1);
+  const bottomRight = terrainKindAtTile(tileX + 1, tileY + 1);
+  const landA = topLeft !== WATER_KIND && bottomRight !== WATER_KIND;
+  const waterA = topRight === WATER_KIND && bottomLeft === WATER_KIND;
+  const landB = topRight !== WATER_KIND && bottomLeft !== WATER_KIND;
+  const waterB = topLeft === WATER_KIND && bottomRight === WATER_KIND;
+
+  return (landA && waterA) || (landB && waterB);
 }
 
 function connectedWaterMassAtPoint(chunks, x, y) {
