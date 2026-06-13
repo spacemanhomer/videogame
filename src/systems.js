@@ -13,15 +13,10 @@ import {
   HORDE_LEVEL,
   INITIAL_ENEMY_COUNT,
   INITIAL_RELIC_COUNT,
-  LEVEL_UP_INTERVAL,
   MAX_RELIC_COUNT,
   OBSTACLE_DAMAGE_COOLDOWN,
   PLAYER_BASE_SPEED,
-  PLAYER_DAMAGE_LEVEL_STEP,
-  PLAYER_HEALTH_PER_LEVEL,
-  PLAYER_LEVEL_HEAL,
-  PLAYER_MAX_HEALTH,
-  PLAYER_SPEED_PER_LEVEL,
+  PLAYER_LEVEL_HEAL_RATIO,
   SHALLOW_WATER_DAMAGE_CHANCE,
   SHOT_COOLDOWN,
   SHOT_RANGE,
@@ -31,6 +26,7 @@ import {
 import { ecosystemAt } from "./ecosystems.js";
 import { createRelic, createRuinGem, placeRelic, spawnEnemy, spawnRuinZombie, touches } from "./entities.js";
 import { activeObstacles, activeRuins, collidesWithPainfulObstacle, collidesWithSolidObstacle, createObstacleChunks, updateObstacleChunks } from "./obstacles.js";
+import { damageForLevel, levelForRunes, maxHealthForLevel, speedMultiplierForLevel } from "./progression.js";
 import { copyState, createInitialState } from "./state.js";
 import { createTerrainChunks, isImpassableWater, isPainfulWater, terrainSpeedAt, updateTerrainChunks } from "./terrain.js";
 import { resetWorldSeed, seededNoise } from "./worldSeed.js";
@@ -49,7 +45,7 @@ export function resetGame(canvas, existingState = createInitialState()) {
   centerCamera(nextState, canvas);
   nextState.relics = Array.from(
     { length: INITIAL_RELIC_COUNT },
-    () => createRelic(nextState.player, nextState.obstacles)
+    () => createRelic(nextState.player, nextState.obstacles, nextState.level)
   );
   nextState.enemies = Array.from(
     { length: INITIAL_ENEMY_COUNT },
@@ -94,7 +90,7 @@ function seedActiveRuins(state) {
 
 function seedRuinGems(state, ruin) {
   for (let index = 0; index < RUIN_GEMS_PER_RUIN; index++) {
-    const gem = createRuinGem(ruin, index);
+    const gem = createRuinGem(ruin, index, state.level);
 
     if (
       state.collectedRuinGemIds.has(gem.id) ||
@@ -129,7 +125,7 @@ function centerCamera(state, canvas) {
 }
 
 function movePlayer(state, input) {
-  const speed = PLAYER_BASE_SPEED * playerSpeedMultiplier(state) * terrainSpeedAt(state.terrain, state.player);
+  const speed = PLAYER_BASE_SPEED * speedMultiplierForLevel(state.level) * terrainSpeedAt(state.terrain, state.player);
   const next = { ...state.player };
 
   if (input.isPressed("w", "arrowup")) next.y -= speed;
@@ -161,7 +157,7 @@ function fireSlingshot(state, input) {
     range: SHOT_RANGE,
     size: SHOT_SIZE,
     speed: SHOT_SPEED,
-    damage: playerDamage(state),
+    damage: damageForLevel(state.level),
     kind: "stone"
   }));
 
@@ -186,7 +182,7 @@ function fireBuckshot(state, input) {
       range: BUCKSHOT_RANGE,
       size: BUCKSHOT_SIZE,
       speed: BUCKSHOT_SPEED,
-      damage: playerDamage(state),
+      damage: damageForLevel(state.level),
       kind: "buckshot"
     }));
   }
@@ -244,45 +240,40 @@ function collectRelics(state, hud) {
     if (!touches(state.player, relic)) continue;
 
     const value = relic.value || 1;
+    const previousLevel = state.level;
     state.score += value;
+    state.level = levelForRunes(state.score);
     collected = true;
 
     if (relic.kind === "ruin-gem") {
       state.collectedRuinGemIds.add(relic.id);
       state.relics.splice(index, 1);
     } else {
-      placeRelic(relic, state.player, state.obstacles);
+      placeRelic(relic, state.player, state.obstacles, state.level);
     }
 
-    while (state.score >= state.level * LEVEL_UP_INTERVAL) {
-      levelUpPlayer(state);
-      addEnemies(state, enemiesForLevel(state.level));
-
-      if (state.relics.filter(item => item.kind !== "ruin-gem").length < MAX_RELIC_COUNT) {
-        state.relics.push(createRelic(state.player, state.obstacles));
-      }
+    if (state.level > previousLevel) {
+      applyLevelUps(state, previousLevel);
     }
   }
 
   if (collected) hud.update(state);
 }
 
-function levelUpPlayer(state) {
-  state.level++;
-  state.maxHealth = playerMaxHealth(state.level);
-  state.health = Math.min(state.maxHealth, state.health + PLAYER_LEVEL_HEAL + PLAYER_HEALTH_PER_LEVEL);
-}
+function applyLevelUps(state, previousLevel) {
+  for (let level = previousLevel + 1; level <= state.level; level++) {
+    const previousMaxHealth = state.maxHealth;
+    state.maxHealth = maxHealthForLevel(level);
+    state.health = Math.min(
+      state.maxHealth,
+      state.health + Math.max(1, Math.ceil((state.maxHealth - previousMaxHealth) * PLAYER_LEVEL_HEAL_RATIO))
+    );
+    addEnemies(state, enemiesForLevel(level));
 
-function playerMaxHealth(level) {
-  return PLAYER_MAX_HEALTH + (level - 1) * PLAYER_HEALTH_PER_LEVEL;
-}
-
-function playerSpeedMultiplier(state) {
-  return 1 + (state.level - 1) * PLAYER_SPEED_PER_LEVEL;
-}
-
-function playerDamage(state) {
-  return 1 + Math.floor((state.level - 1) / PLAYER_DAMAGE_LEVEL_STEP);
+    if (state.relics.filter(item => item.kind !== "ruin-gem").length < MAX_RELIC_COUNT) {
+      state.relics.push(createRelic(state.player, state.obstacles, level));
+    }
+  }
 }
 
 function enemiesForLevel(level) {
@@ -303,7 +294,7 @@ function applyEnemyContactDamage(state, enemy, canvas, hud) {
   const now = Date.now();
   if (now - state.lastEnemyDamageAt < ENEMY_CONTACT_COOLDOWN) return;
 
-  state.health -= enemy.damage || 1;
+  state.health -= enemy.damage || 2;
   state.lastEnemyDamageAt = now;
   knockPlayerAwayFrom(state, enemy);
   loadWorldAroundPlayer(state);
@@ -353,7 +344,7 @@ function updateTerrainDamage(state, canvas, hud) {
 function replenishNearbySpawns(state) {
   state.relics = state.relics.map(relic => (
     relic.kind !== "ruin-gem" && distanceBetween(relic, state.player) > DESPAWN_RADIUS
-      ? createRelic(state.player, state.obstacles)
+      ? createRelic(state.player, state.obstacles, state.level)
       : relic
   ));
 
