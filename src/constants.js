@@ -1,10 +1,10 @@
 export const TILE_SIZE = 20;
-export const GRID_COLUMNS = 40;
-export const GRID_ROWS = 25;
+export const GRID_COLUMNS = 80;
+export const GRID_ROWS = 50;
 export const CHUNK_SIZE_TILES = 16;
-export const ACTIVE_CHUNK_RADIUS = 2;
-export const SPAWN_RADIUS = 520;
-export const DESPAWN_RADIUS = 1200;
+export const ACTIVE_CHUNK_RADIUS = 3;
+export const SPAWN_RADIUS = 1040;
+export const DESPAWN_RADIUS = 2400;
 
 export const PLAYER_START = Object.freeze({ x: 80, y: 80 });
 export const PLAYER_BASE_SPEED = 4;
@@ -24,6 +24,8 @@ export const HORDE_LEVEL = 5;
 export const HORDE_ENEMIES_PER_LEVEL = 4;
 
 export const ENEMY_SEEK_SPEED = 1.65;
+export const ENEMY_CONTACT_COOLDOWN = 850;
+export const ENEMY_CONTACT_KNOCKBACK = 34;
 
 export const SHOT_COOLDOWN = 280;
 export const SHOT_RANGE = 220;
