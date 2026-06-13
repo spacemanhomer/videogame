@@ -7,6 +7,8 @@ import {
   BUCKSHOT_SPREAD,
   DESPAWN_RADIUS,
   ENEMIES_PER_LEVEL,
+  ENEMY_CONTACT_COOLDOWN,
+  ENEMY_CONTACT_KNOCKBACK,
   HORDE_ENEMIES_PER_LEVEL,
   HORDE_LEVEL,
   INITIAL_ENEMY_COUNT,
@@ -27,7 +29,7 @@ import {
   SHOT_SPEED
 } from "./constants.js";
 import { ecosystemAt } from "./ecosystems.js";
-import { createRelic, placeRelic, resetPlayer, spawnEnemy, touches } from "./entities.js";
+import { createRelic, placeRelic, spawnEnemy, touches } from "./entities.js";
 import { activeObstacles, collidesWithPainfulObstacle, collidesWithSolidObstacle, createObstacleChunks, updateObstacleChunks } from "./obstacles.js";
 import { copyState, createInitialState } from "./state.js";
 import { createTerrainChunks, isImpassableWater, isPainfulWater, terrainSpeedAt, updateTerrainChunks } from "./terrain.js";
@@ -243,17 +245,43 @@ function updateEnemies(state, canvas, hud) {
   for (const enemy of state.enemies) {
     steerEnemy(enemy, state.player);
     moveEnemy(enemy, state.obstacles);
+  }
 
-    if (touches(state.player, enemy)) {
-      state.health -= enemy.damage || 1;
-      resetPlayer(state.player);
-      loadWorldAroundPlayer(state);
-      updateCurrentEcosystem(state);
-      centerCamera(state, canvas);
+  const contactEnemy = state.enemies.find(enemy => touches(state.player, enemy));
+  if (contactEnemy) applyEnemyContactDamage(state, contactEnemy, canvas, hud);
+}
 
-      if (state.health <= 0) resetGame(canvas, state);
-      hud.update(state);
-    }
+function applyEnemyContactDamage(state, enemy, canvas, hud) {
+  const now = Date.now();
+  if (now - state.lastEnemyDamageAt < ENEMY_CONTACT_COOLDOWN) return;
+
+  state.health -= enemy.damage || 1;
+  state.lastEnemyDamageAt = now;
+  knockPlayerAwayFrom(state, enemy);
+  loadWorldAroundPlayer(state);
+  updateCurrentEcosystem(state);
+  centerCamera(state, canvas);
+
+  if (state.health <= 0) resetGame(canvas, state);
+  hud.update(state);
+}
+
+function knockPlayerAwayFrom(state, enemy) {
+  const playerCenter = centerOf(state.player);
+  const enemyCenter = centerOf(enemy);
+  const direction = normalize({
+    x: playerCenter.x - enemyCenter.x,
+    y: playerCenter.y - enemyCenter.y
+  });
+  const knocked = {
+    ...state.player,
+    x: state.player.x + direction.x * ENEMY_CONTACT_KNOCKBACK,
+    y: state.player.y + direction.y * ENEMY_CONTACT_KNOCKBACK
+  };
+
+  if (!isBlockedByWorld(state, knocked)) {
+    state.player.x = knocked.x;
+    state.player.y = knocked.y;
   }
 }
 
