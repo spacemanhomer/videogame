@@ -29,11 +29,15 @@ import {
   SHOT_SPEED
 } from "./constants.js";
 import { ecosystemAt } from "./ecosystems.js";
-import { createRelic, placeRelic, spawnEnemy, touches } from "./entities.js";
-import { activeObstacles, collidesWithPainfulObstacle, collidesWithSolidObstacle, createObstacleChunks, updateObstacleChunks } from "./obstacles.js";
+import { createRelic, createRuinGem, placeRelic, spawnEnemy, spawnRuinZombie, touches } from "./entities.js";
+import { activeObstacles, activeRuins, collidesWithPainfulObstacle, collidesWithSolidObstacle, createObstacleChunks, updateObstacleChunks } from "./obstacles.js";
 import { copyState, createInitialState } from "./state.js";
 import { createTerrainChunks, isImpassableWater, isPainfulWater, terrainSpeedAt, updateTerrainChunks } from "./terrain.js";
-import { resetWorldSeed } from "./worldSeed.js";
+import { resetWorldSeed, seededNoise } from "./worldSeed.js";
+
+const RUIN_GEMS_PER_RUIN = 2;
+const RUIN_ZOMBIE_MIN = 8;
+const RUIN_ZOMBIE_EXTRA = 7;
 
 export function resetGame(canvas, existingState = createInitialState()) {
   resetWorldSeed();
@@ -77,6 +81,42 @@ function loadWorldAroundPlayer(state) {
   updateTerrainChunks(state.terrain, state.player);
   updateObstacleChunks(state.obstacleChunks, state.player);
   state.obstacles = activeObstacles(state.obstacleChunks);
+  state.ruins = activeRuins(state.obstacleChunks);
+  seedActiveRuins(state);
+}
+
+function seedActiveRuins(state) {
+  for (const ruin of state.ruins) {
+    seedRuinGems(state, ruin);
+    seedRuinZombies(state, ruin);
+  }
+}
+
+function seedRuinGems(state, ruin) {
+  for (let index = 0; index < RUIN_GEMS_PER_RUIN; index++) {
+    const gem = createRuinGem(ruin, index);
+
+    if (
+      state.collectedRuinGemIds.has(gem.id) ||
+      state.relics.some(relic => relic.id === gem.id)
+    ) continue;
+
+    state.relics.push(gem);
+  }
+}
+
+function seedRuinZombies(state, ruin) {
+  if (state.spawnedRuinIds.has(ruin.id)) return;
+
+  const count = RUIN_ZOMBIE_MIN + Math.floor(seededNoise(ruin.chunkX, ruin.chunkY, 430) * RUIN_ZOMBIE_EXTRA);
+
+  for (let index = 0; index < count; index++) {
+    const x = ruin.innerX + seededNoise(ruin.chunkX + index, ruin.chunkY, 431) * Math.max(1, ruin.innerWidth - 20);
+    const y = ruin.innerY + seededNoise(ruin.chunkX, ruin.chunkY + index, 432) * Math.max(1, ruin.innerHeight - 20);
+    state.enemies.push(spawnRuinZombie({ x, y }, index * 0.6));
+  }
+
+  state.spawnedRuinIds.add(ruin.id);
 }
 
 function updateCurrentEcosystem(state) {
@@ -199,18 +239,26 @@ function updateProjectiles(state) {
 function collectRelics(state, hud) {
   let collected = false;
 
-  for (const relic of state.relics) {
+  for (let index = state.relics.length - 1; index >= 0; index--) {
+    const relic = state.relics[index];
     if (!touches(state.player, relic)) continue;
 
-    state.score++;
+    const value = relic.value || 1;
+    state.score += value;
     collected = true;
-    placeRelic(relic, state.player, state.obstacles);
 
-    if (state.score % LEVEL_UP_INTERVAL === 0) {
+    if (relic.kind === "ruin-gem") {
+      state.collectedRuinGemIds.add(relic.id);
+      state.relics.splice(index, 1);
+    } else {
+      placeRelic(relic, state.player, state.obstacles);
+    }
+
+    while (state.score >= state.level * LEVEL_UP_INTERVAL) {
       levelUpPlayer(state);
       addEnemies(state, enemiesForLevel(state.level));
 
-      if (state.relics.length < MAX_RELIC_COUNT) {
+      if (state.relics.filter(item => item.kind !== "ruin-gem").length < MAX_RELIC_COUNT) {
         state.relics.push(createRelic(state.player, state.obstacles));
       }
     }
@@ -304,7 +352,7 @@ function updateTerrainDamage(state, canvas, hud) {
 
 function replenishNearbySpawns(state) {
   state.relics = state.relics.map(relic => (
-    distanceBetween(relic, state.player) > DESPAWN_RADIUS
+    relic.kind !== "ruin-gem" && distanceBetween(relic, state.player) > DESPAWN_RADIUS
       ? createRelic(state.player, state.obstacles)
       : relic
   ));
