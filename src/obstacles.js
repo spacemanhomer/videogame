@@ -38,6 +38,10 @@ export function activeObstacles(chunks) {
   return [...chunks.values()].flatMap(chunk => chunk.obstacles);
 }
 
+export function activeRuins(chunks) {
+  return [...chunks.values()].flatMap(chunk => chunk.ruins || []);
+}
+
 export function drawObstacles(ctx, obstacles, camera) {
   ctx.save();
   ctx.textAlign = "center";
@@ -80,14 +84,15 @@ export function collidesWithPainfulObstacle(rect, obstacles) {
 
 function createObstacleChunk(chunkX, chunkY) {
   const obstacles = [];
+  const ruins = [];
 
   addGeneratedRun(obstacles, chunkX, chunkY, "cactus", 0);
   addGeneratedRun(obstacles, chunkX, chunkY, "cactus", 1);
   addGeneratedCluster(obstacles, chunkX, chunkY, "thorns", 2);
   addGeneratedCluster(obstacles, chunkX, chunkY, "stone", 3);
-  addGlyphRuin(obstacles, chunkX, chunkY);
+  addGlyphRuin(obstacles, ruins, chunkX, chunkY);
 
-  return { x: chunkX, y: chunkY, obstacles };
+  return { x: chunkX, y: chunkY, obstacles, ruins };
 }
 
 function addGeneratedRun(obstacles, chunkX, chunkY, type, salt) {
@@ -117,15 +122,17 @@ function addGeneratedCluster(obstacles, chunkX, chunkY, type, salt) {
   }
 }
 
-function addGlyphRuin(obstacles, chunkX, chunkY) {
-  if (seededNoise(chunkX, chunkY, 100) < 0.72) return;
+function addGlyphRuin(obstacles, ruins, chunkX, chunkY) {
+  if (seededNoise(chunkX, chunkY, 100) < 0.86) return;
 
-  const width = 5 + Math.floor(seededNoise(chunkX, chunkY, 101) * 5);
-  const height = 4 + Math.floor(seededNoise(chunkX, chunkY, 102) * 4);
+  const width = 7 + Math.floor(seededNoise(chunkX, chunkY, 101) * 4);
+  const height = 6 + Math.floor(seededNoise(chunkX, chunkY, 102) * 3);
   const baseX = Math.floor(seededNoise(chunkX, chunkY, 103) * (CHUNK_SIZE_TILES - width));
   const baseY = Math.floor(seededNoise(chunkX, chunkY, 104) * (CHUNK_SIZE_TILES - height));
   const gapSide = Math.floor(seededNoise(chunkX, chunkY, 105) * 4);
-  const gapOffset = 1 + Math.floor(seededNoise(chunkX, chunkY, 106) * Math.max(1, (gapSide < 2 ? width : height) - 2));
+  const gapLimit = Math.max(1, (gapSide < 2 ? width : height) - 3);
+  const gapOffset = 1 + Math.floor(seededNoise(chunkX, chunkY, 106) * gapLimit);
+  const ruin = createRuin(chunkX, chunkY, baseX, baseY, width, height);
 
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
@@ -135,18 +142,39 @@ function addGlyphRuin(obstacles, chunkX, chunkY) {
       const onRight = x === width - 1;
       const onWall = onTop || onBottom || onLeft || onRight;
       const isGap =
-        (gapSide === 0 && onTop && x === gapOffset) ||
-        (gapSide === 1 && onBottom && x === gapOffset) ||
-        (gapSide === 2 && onLeft && y === gapOffset) ||
-        (gapSide === 3 && onRight && y === gapOffset);
+        (gapSide === 0 && onTop && (x === gapOffset || x === gapOffset + 1)) ||
+        (gapSide === 1 && onBottom && (x === gapOffset || x === gapOffset + 1)) ||
+        (gapSide === 2 && onLeft && (y === gapOffset || y === gapOffset + 1)) ||
+        (gapSide === 3 && onRight && (y === gapOffset || y === gapOffset + 1));
 
       if (onWall && !isGap) {
         addGlyphObstacle(obstacles, chunkX, chunkY, baseX + x, baseY + y, x, y);
-      } else if (!onWall && seededNoise(chunkX + x, chunkY + y, 108) > 0.42) {
+      } else if (!onWall && seededNoise(chunkX + x, chunkY + y, 108) > 0.22) {
         addPurpleRune(obstacles, chunkX, chunkY, baseX + x, baseY + y, x, y);
       }
     }
   }
+
+  if (Math.hypot(ruin.x - PLAYER_START.x, ruin.y - PLAYER_START.y) > 180) ruins.push(ruin);
+}
+
+function createRuin(chunkX, chunkY, baseX, baseY, width, height) {
+  const tileX = chunkX * CHUNK_SIZE_TILES + baseX;
+  const tileY = chunkY * CHUNK_SIZE_TILES + baseY;
+
+  return {
+    id: `${chunkX},${chunkY}:${baseX},${baseY}`,
+    x: tileX * TILE_SIZE,
+    y: tileY * TILE_SIZE,
+    width: width * TILE_SIZE,
+    height: height * TILE_SIZE,
+    innerX: (tileX + 1) * TILE_SIZE,
+    innerY: (tileY + 1) * TILE_SIZE,
+    innerWidth: (width - 2) * TILE_SIZE,
+    innerHeight: (height - 2) * TILE_SIZE,
+    chunkX,
+    chunkY
+  };
 }
 
 function addObstacle(obstacles, type, chunkX, chunkY, localTileX, localTileY) {
