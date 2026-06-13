@@ -9,6 +9,8 @@ import {
   ENEMIES_PER_LEVEL,
   ENEMY_CONTACT_COOLDOWN,
   ENEMY_CONTACT_KNOCKBACK,
+  ENEMY_HEALTH_DAMAGE_RATIO,
+  ENEMY_HEALTH_SCALING_LEVEL,
   HORDE_ENEMIES_PER_LEVEL,
   HORDE_LEVEL,
   INITIAL_ENEMY_COUNT,
@@ -294,7 +296,7 @@ function applyEnemyContactDamage(state, enemy, canvas, hud) {
   const now = Date.now();
   if (now - state.lastEnemyDamageAt < ENEMY_CONTACT_COOLDOWN) return;
 
-  state.health -= enemy.damage || 2;
+  state.health -= enemyContactDamage(state, enemy);
   state.lastEnemyDamageAt = now;
   knockPlayerAwayFrom(state, enemy);
   loadWorldAroundPlayer(state);
@@ -303,6 +305,13 @@ function applyEnemyContactDamage(state, enemy, canvas, hud) {
 
   if (state.health <= 0) resetGame(canvas, state);
   hud.update(state);
+}
+
+function enemyContactDamage(state, enemy) {
+  const baseDamage = enemy.damage || 2;
+  if (state.level < ENEMY_HEALTH_SCALING_LEVEL) return baseDamage;
+
+  return Math.max(baseDamage, Math.ceil((state.maxHealth || state.health) * ENEMY_HEALTH_DAMAGE_RATIO));
 }
 
 function knockPlayerAwayFrom(state, enemy) {
