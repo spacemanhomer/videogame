@@ -15,6 +15,11 @@ import {
   MAX_RELIC_COUNT,
   OBSTACLE_DAMAGE_COOLDOWN,
   PLAYER_BASE_SPEED,
+  PLAYER_DAMAGE_LEVEL_STEP,
+  PLAYER_HEALTH_PER_LEVEL,
+  PLAYER_LEVEL_HEAL,
+  PLAYER_MAX_HEALTH,
+  PLAYER_SPEED_PER_LEVEL,
   SHALLOW_WATER_DAMAGE_CHANCE,
   SHOT_COOLDOWN,
   SHOT_RANGE,
@@ -82,7 +87,7 @@ function centerCamera(state, canvas) {
 }
 
 function movePlayer(state, input) {
-  const speed = PLAYER_BASE_SPEED * terrainSpeedAt(state.terrain, state.player);
+  const speed = PLAYER_BASE_SPEED * playerSpeedMultiplier(state) * terrainSpeedAt(state.terrain, state.player);
   const next = { ...state.player };
 
   if (input.isPressed("w", "arrowup")) next.y -= speed;
@@ -114,7 +119,7 @@ function fireSlingshot(state, input) {
     range: SHOT_RANGE,
     size: SHOT_SIZE,
     speed: SHOT_SPEED,
-    damage: 1,
+    damage: playerDamage(state),
     kind: "stone"
   }));
 
@@ -139,7 +144,7 @@ function fireBuckshot(state, input) {
       range: BUCKSHOT_RANGE,
       size: BUCKSHOT_SIZE,
       speed: BUCKSHOT_SPEED,
-      damage: 1,
+      damage: playerDamage(state),
       kind: "buckshot"
     }));
   }
@@ -200,7 +205,7 @@ function collectRelics(state, hud) {
     placeRelic(relic, state.player, state.obstacles);
 
     if (state.score % LEVEL_UP_INTERVAL === 0) {
-      state.level++;
+      levelUpPlayer(state);
       addEnemies(state, enemiesForLevel(state.level));
 
       if (state.relics.length < MAX_RELIC_COUNT) {
@@ -210,6 +215,24 @@ function collectRelics(state, hud) {
   }
 
   if (collected) hud.update(state);
+}
+
+function levelUpPlayer(state) {
+  state.level++;
+  state.maxHealth = playerMaxHealth(state.level);
+  state.health = Math.min(state.maxHealth, state.health + PLAYER_LEVEL_HEAL + PLAYER_HEALTH_PER_LEVEL);
+}
+
+function playerMaxHealth(level) {
+  return PLAYER_MAX_HEALTH + (level - 1) * PLAYER_HEALTH_PER_LEVEL;
+}
+
+function playerSpeedMultiplier(state) {
+  return 1 + (state.level - 1) * PLAYER_SPEED_PER_LEVEL;
+}
+
+function playerDamage(state) {
+  return 1 + Math.floor((state.level - 1) / PLAYER_DAMAGE_LEVEL_STEP);
 }
 
 function enemiesForLevel(level) {
