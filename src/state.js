@@ -7,6 +7,9 @@ export function createInitialState() {
     terrain: new Map(),
     obstacleChunks: new Map(),
     obstacles: [],
+    ruins: [],
+    spawnedRuinIds: new Set(),
+    collectedRuinGemIds: new Set(),
     camera: { x: 0, y: 0 },
     currentEcosystem: "scrub",
     score: 0,
@@ -30,6 +33,9 @@ export function copyState(target, source) {
   target.terrain = source.terrain;
   target.obstacleChunks = source.obstacleChunks;
   target.obstacles = source.obstacles;
+  target.ruins = source.ruins;
+  target.spawnedRuinIds = source.spawnedRuinIds;
+  target.collectedRuinGemIds = source.collectedRuinGemIds;
   target.camera = source.camera;
   target.currentEcosystem = source.currentEcosystem;
   target.score = source.score;
