@@ -28,6 +28,8 @@ export const HORDE_ENEMIES_PER_LEVEL = 4;
 export const ENEMY_SEEK_SPEED = 1.65;
 export const ENEMY_CONTACT_COOLDOWN = 850;
 export const ENEMY_CONTACT_KNOCKBACK = 34;
+export const ENEMY_HEALTH_SCALING_LEVEL = 5;
+export const ENEMY_HEALTH_DAMAGE_RATIO = 0.14;
 
 export const SHOT_COOLDOWN = 280;
 export const SHOT_RANGE = 220;
