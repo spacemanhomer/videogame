@@ -1,5 +1,5 @@
 import { PLAYER_START, SPAWN_RADIUS } from "./constants.js";
-import { ecosystemAt, pickEnemyTypeFor } from "./ecosystems.js";
+import { ENEMY_TYPES, ecosystemAt, pickEnemyTypeFor } from "./ecosystems.js";
 import { collidesWithSolidObstacle } from "./obstacles.js";
 import { seededNoise } from "./worldSeed.js";
 
@@ -11,37 +11,60 @@ const RELIC_STYLES = Object.freeze([
   { glyph: "𓂀", color: "#f4c06a", fill: "#fff0c8", stroke: "#4a2600", aura: "rgba(244, 192, 106, 0.32)" }
 ]);
 
+const RUIN_GEMS = Object.freeze([
+  { glyph: "◆", color: "#a970ff", fill: "#f1dcff", stroke: "#210047", aura: "rgba(169, 112, 255, 0.5)" },
+  { glyph: "◈", color: "#45e5ff", fill: "#e2fbff", stroke: "#003a4d", aura: "rgba(69, 229, 255, 0.45)" },
+  { glyph: "✦", color: "#ffcf5b", fill: "#fff4c8", stroke: "#4f2b00", aura: "rgba(255, 207, 91, 0.48)" }
+]);
+
 export function spawnEnemy(anchor, obstacles = []) {
   const position = randomOpenPosition(anchor, 20, obstacles, 140);
   const type = pickEnemyTypeFor(position);
   const ecosystem = ecosystemAt(position.x, position.y);
 
-  return {
-    x: position.x,
-    y: position.y,
-    size: 20,
-    vx: 0,
-    vy: 0,
-    type: type.id,
-    ecosystem: ecosystem.name,
-    glyph: type.glyph,
-    color: type.color,
-    fill: type.fill,
-    stroke: type.stroke,
-    speed: type.speed,
-    hp: type.hp,
-    damage: type.damage,
-    wobble: type.wobble,
-    orbit: type.orbit,
-    ignoresWalls: type.ignoresWalls,
-    phase: Math.random() * Math.PI * 2
-  };
+  return createEnemyFromType(position, type, ecosystem.name);
+}
+
+export function spawnRuinZombie(position, phase = 0) {
+  const type = ENEMY_TYPES.mummy;
+  const zombie = createEnemyFromType(position, type, "ruin");
+
+  zombie.type = "ruin-zombie";
+  zombie.glyph = "𓀾";
+  zombie.color = "#5d3a6f";
+  zombie.fill = "#ead7ff";
+  zombie.stroke = "#1c0029";
+  zombie.speed = 1.15;
+  zombie.hp = 2;
+  zombie.damage = 1;
+  zombie.wobble = 0.22;
+  zombie.orbit = 0.08;
+  zombie.phase = phase;
+
+  return zombie;
 }
 
 export function createRelic(anchor, obstacles = []) {
-  const relic = { x: anchor.x, y: anchor.y, size: 18, ...pickRelicStyle(anchor) };
+  const relic = { x: anchor.x, y: anchor.y, size: 18, value: 1, ...pickRelicStyle(anchor) };
   placeRelic(relic, anchor, obstacles);
   return relic;
+}
+
+export function createRuinGem(ruin, index) {
+  const style = RUIN_GEMS[index % RUIN_GEMS.length];
+  const value = seededNoise(ruin.chunkX + index, ruin.chunkY, 410) > 0.48 ? 3 : 2;
+  const x = ruin.innerX + seededNoise(ruin.chunkX + index, ruin.chunkY, 411) * Math.max(1, ruin.innerWidth - 24);
+  const y = ruin.innerY + seededNoise(ruin.chunkX, ruin.chunkY + index, 412) * Math.max(1, ruin.innerHeight - 24);
+
+  return {
+    id: `${ruin.id}:gem:${index}`,
+    kind: "ruin-gem",
+    x,
+    y,
+    size: 22,
+    value,
+    ...style
+  };
 }
 
 export function placeRelic(relic, anchor, obstacles = []) {
@@ -63,6 +86,29 @@ export function touches(a, b) {
     a.y < b.y + b.size &&
     a.y + a.size > b.y
   );
+}
+
+function createEnemyFromType(position, type, ecosystem) {
+  return {
+    x: position.x,
+    y: position.y,
+    size: 20,
+    vx: 0,
+    vy: 0,
+    type: type.id,
+    ecosystem,
+    glyph: type.glyph,
+    color: type.color,
+    fill: type.fill,
+    stroke: type.stroke,
+    speed: type.speed,
+    hp: type.hp,
+    damage: type.damage,
+    wobble: type.wobble,
+    orbit: type.orbit,
+    ignoresWalls: type.ignoresWalls,
+    phase: Math.random() * Math.PI * 2
+  };
 }
 
 function randomOpenPosition(anchor, size, obstacles, minDistance) {
